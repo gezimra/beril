@@ -56,15 +56,18 @@ export default async function AdminCustomersPage({
               <th className="px-2 py-2">Email</th>
               <th className="px-2 py-2">Phone</th>
               <th className="px-2 py-2">Orders</th>
+              <th className="px-2 py-2">Latest order</th>
               <th className="px-2 py-2">Repairs</th>
+              <th className="px-2 py-2">Latest repair</th>
               <th className="px-2 py-2">Contacts</th>
+              <th className="px-2 py-2">Latest contact</th>
               <th className="px-2 py-2">Last activity</th>
             </tr>
           </thead>
           <tbody>
             {customers.length === 0 ? (
               <tr>
-                <td colSpan={7} className="px-2 py-5 text-graphite/72">
+                <td colSpan={10} className="px-2 py-5 text-graphite/72">
                   No customers found.
                 </td>
               </tr>
@@ -75,8 +78,17 @@ export default async function AdminCustomersPage({
                   <td className="px-2 py-3 text-graphite/75">{customer.email ?? "-"}</td>
                   <td className="px-2 py-3 text-graphite/75">{customer.phone ?? "-"}</td>
                   <td className="px-2 py-3 text-graphite/75">{customer.orderCount}</td>
+                  <td className="px-2 py-3 text-graphite/75">
+                    {customer.latestOrderCode ?? "-"}
+                  </td>
                   <td className="px-2 py-3 text-graphite/75">{customer.repairCount}</td>
+                  <td className="px-2 py-3 text-graphite/75">
+                    {customer.latestRepairCode ?? "-"}
+                  </td>
                   <td className="px-2 py-3 text-graphite/75">{customer.contactCount}</td>
+                  <td className="px-2 py-3 text-graphite/75">
+                    {customer.latestContactSubject ?? "-"}
+                  </td>
                   <td className="px-2 py-3 text-graphite/75">
                     {new Date(customer.lastActivityAt).toLocaleString()}
                   </td>

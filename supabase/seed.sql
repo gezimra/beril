@@ -1,5 +1,6 @@
 insert into public.site_settings (key, value)
 values
+  ('business.name', 'BERIL'),
   ('hero.headline', 'Precision in Time & Vision'),
   ('hero.subheadline', 'Ora te kuruara, syze te rafinuara dhe servis i besuar ne Gjilan.'),
   ('hero.primary_cta_label', 'Shop Watches'),
@@ -11,8 +12,12 @@ values
   ('store.address', 'Rruga e Qytetit, Gjilan 60000, Kosovo'),
   ('store.hours', 'Hene - Shtune, 09:00 - 19:00'),
   ('store.phone', '+383 44 000 000'),
+  ('store.email', 'info@beril.store'),
   ('store.whatsapp', '+383 44 000 000'),
   ('store.map_url', 'https://www.google.com/maps/search/?api=1&query=Gjilan+Kosovo'),
+  ('seo.default_title', 'BERIL | Ora dhe Syze ne Gjilan'),
+  ('seo.default_description', 'Ora te kuruara, syze te rafinuara dhe servis i besuar ne Gjilan.'),
+  ('seo.default_image', '/placeholders/product-default.svg'),
   ('commerce.delivery_fee_home', '3.00')
 on conflict (key) do update set
   value = excluded.value;
@@ -192,7 +197,7 @@ insert into public.journal_posts (slug, title, excerpt, content, status, publish
 values
   ('si-te-zgjidhni-nje-ore', 'Si te zgjidhni nje ore', 'Udhezues i shkurter per zgjedhjen e ores sipas stilit dhe perdorimit.', 'Permbajtja e artikullit do te pasurohet ne fazen e content-it.', 'published', timezone('utc', now())),
   ('kur-nderrohet-bateria', 'Kur nderrohet bateria e ores', 'Shenjat praktike qe tregojne se bateria duhet nderruar.', 'Permbajtja e artikullit do te pasurohet ne fazen e content-it.', 'published', timezone('utc', now())),
-  ('kujdesi-baze-per-syzet', 'Kujdesi baze per syzet', 'Keshilla te shpejta per mirembajtjen e syzeve ne perdorim ditor.', 'draft', null)
+  ('kujdesi-baze-per-syzet', 'Kujdesi baze per syzet', 'Keshilla te shpejta per mirembajtjen e syzeve ne perdorim ditor.', 'Permbajtja e artikullit do te pasurohet ne fazen e content-it.', 'draft', null)
 on conflict (slug) do update set
   title = excluded.title,
   excerpt = excluded.excerpt,

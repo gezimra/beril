@@ -1,5 +1,6 @@
 import { createSupabaseServiceClient } from "@/lib/db/supabase/service";
 import {
+  addFallbackRepairAttachment,
   addFallbackContact,
   getFallbackContacts,
   getFallbackCustomerKey,
@@ -10,12 +11,12 @@ import {
   getFallbackSiteSettings,
   updateFallbackOrder,
   updateFallbackRepair,
+  updateFallbackJournalCoverImage,
   updateFallbackSiteSetting,
   upsertFallbackJournalPost,
   upsertFallbackProduct,
 } from "@/lib/db/fallback-store";
 import { mockSiteSettings } from "@/lib/db/mock-data";
-import { normalizeEmail, normalizePhone } from "@/lib/utils/codes";
 import type {
   AdminContact,
   AdminCustomerRow,
@@ -98,6 +99,13 @@ type RepairRow = {
     created_at: string;
     visible_to_customer: boolean;
   }>;
+  repair_attachments?: Array<{
+    id: string;
+    file_url: string;
+    file_type: string;
+    file_label: string | null;
+    created_at: string;
+  }>;
 };
 
 const ORDER_STATUSES: OrderStatus[] = [
@@ -125,14 +133,12 @@ const REPAIR_STATUSES: RepairStatus[] = [
 
 const JOURNAL_STATUSES: JournalStatus[] = ["draft", "published", "archived"];
 const PRODUCT_STATUSES = ["draft", "active", "archived"] as const;
-const STOCK_STATUSES: StockStatus[] = [
-  "in_stock",
-  "limited",
-  "available_on_request",
-  "out_of_stock",
-];
 
 const nowIso = () => new Date().toISOString();
+
+function sanitizeFileName(name: string) {
+  return name.toLowerCase().replace(/[^a-z0-9.\-_]/g, "-");
+}
 
 function toAdminOrder(row: OrderRow): AdminOrder {
   return {
@@ -196,10 +202,19 @@ function toAdminRepair(row: RepairRow): AdminRepair {
       createdAt: event.created_at,
       visibleToCustomer: event.visible_to_customer,
     })),
+    attachments: (row.repair_attachments ?? []).map((attachment) => ({
+      id: attachment.id,
+      fileUrl: attachment.file_url,
+      fileType: attachment.file_type,
+      fileLabel: attachment.file_label,
+      createdAt: attachment.created_at,
+    })),
   };
 }
 
 function productToAdminRow(product: Product): AdminProductRow {
+  const sortedImages = [...product.images].sort((a, b) => a.sortOrder - b.sortOrder);
+  const primaryImage = sortedImages[0];
   return {
     id: product.id,
     slug: product.slug,
@@ -211,6 +226,13 @@ function productToAdminRow(product: Product): AdminProductRow {
     quantity: product.quantity,
     featured: product.featured,
     isNew: product.isNew,
+    primaryCtaMode: product.primaryCtaMode,
+    primaryImageUrl: primaryImage?.url ?? null,
+    primaryImageAlt: primaryImage?.alt ?? null,
+    imageUrls: sortedImages.map((image) => image.url),
+    specs: [...product.specs]
+      .sort((a, b) => a.sortOrder - b.sortOrder)
+      .map((spec) => ({ key: spec.key, value: spec.value })),
     status: product.status,
   };
 }
@@ -350,7 +372,8 @@ export async function listAdminRepairs({
       `
       id, repair_code, customer_name, email, phone, preferred_contact_method, item_type, brand, model, service_type,
       description, status, estimated_completion, amount_due, notes_internal, notes_customer, created_at, updated_at,
-      repair_status_history(status, note, created_at, visible_to_customer)
+      repair_status_history(status, note, created_at, visible_to_customer),
+      repair_attachments(id, file_url, file_type, file_label, created_at)
     `,
     )
     .order("created_at", { ascending: false })
@@ -471,6 +494,54 @@ export async function updateAdminRepairEstimate(
   }
 }
 
+export async function addAdminRepairAttachment(input: {
+  repairId: string;
+  fileName: string;
+  fileType: string;
+  fileBytes: Uint8Array;
+  fileLabel?: string | null;
+}) {
+  const safeName = sanitizeFileName(input.fileName);
+  const fileType = input.fileType || "application/octet-stream";
+
+  const serviceClient = createSupabaseServiceClient();
+  if (!serviceClient) {
+    addFallbackRepairAttachment({
+      repairId: input.repairId,
+      fileUrl: `/uploads/repairs/${input.repairId}/${safeName}`,
+      fileType,
+      fileLabel: input.fileLabel ?? null,
+    });
+    return;
+  }
+
+  const path = `${input.repairId}/${Date.now()}-${safeName}`;
+  const { error: uploadError } = await serviceClient.storage
+    .from("repairs")
+    .upload(path, input.fileBytes, {
+      contentType: fileType,
+      upsert: false,
+    });
+
+  if (uploadError) {
+    throw new Error(uploadError.message);
+  }
+
+  const { data } = serviceClient.storage.from("repairs").getPublicUrl(path);
+  const { error: insertError } = await serviceClient
+    .from("repair_attachments")
+    .insert({
+      repair_request_id: input.repairId,
+      file_url: data.publicUrl,
+      file_type: fileType,
+      file_label: input.fileLabel ?? null,
+    });
+
+  if (insertError) {
+    throw new Error(insertError.message);
+  }
+}
+
 export async function listAdminProducts({
   search,
   status,
@@ -490,7 +561,11 @@ export async function listAdminProducts({
   let query = serviceClient
     .from("products")
     .select(
-      "id, slug, title, brand, category, price, stock_status, quantity, featured, is_new, status",
+      `
+      id, slug, title, brand, category, price, stock_status, quantity, featured, is_new, primary_cta_mode, status,
+      product_images(url, alt, sort_order),
+      product_specs(key, value, sort_order)
+      `,
     )
     .order("updated_at", { ascending: false })
     .limit(200);
@@ -519,6 +594,26 @@ export async function listAdminProducts({
     quantity: (row.quantity as number | null) ?? null,
     featured: Boolean(row.featured),
     isNew: Boolean(row.is_new),
+    primaryCtaMode: row.primary_cta_mode as AdminProductRow["primaryCtaMode"],
+    primaryImageUrl: (
+      ((row.product_images as Array<Record<string, unknown>> | undefined) ?? [])
+        .sort((a, b) => Number(a.sort_order) - Number(b.sort_order))
+        .map((image) => String(image.url))[0] ?? null
+    ),
+    primaryImageAlt: (
+      ((row.product_images as Array<Record<string, unknown>> | undefined) ?? [])
+        .sort((a, b) => Number(a.sort_order) - Number(b.sort_order))
+        .map((image) => String(image.alt))[0] ?? null
+    ),
+    imageUrls: ((row.product_images as Array<Record<string, unknown>> | undefined) ?? [])
+      .sort((a, b) => Number(a.sort_order) - Number(b.sort_order))
+      .map((image) => String(image.url)),
+    specs: ((row.product_specs as Array<Record<string, unknown>> | undefined) ?? [])
+      .sort((a, b) => Number(a.sort_order) - Number(b.sort_order))
+      .map((spec) => ({
+        key: String(spec.key),
+        value: String(spec.value),
+      })),
     status: row.status as AdminProductRow["status"],
   }));
 }
@@ -542,6 +637,11 @@ export async function upsertAdminProduct(input: {
   quantity: number | null;
   featured: boolean;
   isNew: boolean;
+  primaryCtaMode: "add_to_cart" | "reserve_in_store" | "whatsapp_inquiry" | "request_availability";
+  primaryImageUrl?: string | null;
+  primaryImageAlt?: string | null;
+  imageUrls?: string[];
+  specs?: Array<{ key: string; value: string }>;
   status: "draft" | "active" | "archived";
 }) {
   const serviceClient = createSupabaseServiceClient();
@@ -565,8 +665,45 @@ export async function upsertAdminProduct(input: {
         quantity: input.quantity,
         featured: input.featured,
         isNew: input.isNew,
+        primaryCtaMode: input.primaryCtaMode,
         status: input.status,
         updatedAt: nowIso(),
+        images:
+          input.imageUrls && input.imageUrls.length > 0
+            ? input.imageUrls.map((url, index) => ({
+                id: `${existing.id}-img-${index + 1}`,
+                productId: existing.id,
+                url,
+                alt:
+                  index === 0
+                    ? input.primaryImageAlt ?? `${input.title} product image`
+                    : `${input.title} product image ${index + 1}`,
+                sortOrder: index + 1,
+              }))
+            : input.primaryImageUrl
+              ? [
+                  {
+                    ...(existing.images[0] ?? {
+                      id: `img-${Date.now()}`,
+                      productId: existing.id,
+                      sortOrder: 1,
+                    }),
+                    url: input.primaryImageUrl,
+                    alt: input.primaryImageAlt ?? `${input.title} product image`,
+                  },
+                  ...existing.images.slice(1),
+                ]
+              : existing.images,
+        specs:
+          input.specs && input.specs.length > 0
+            ? input.specs.map((spec, index) => ({
+                id: `${existing.id}-spec-${index + 1}`,
+                productId: existing.id,
+                key: spec.key,
+                value: spec.value,
+                sortOrder: index + 1,
+              }))
+            : existing.specs,
       });
       return;
     }
@@ -588,7 +725,7 @@ export async function upsertAdminProduct(input: {
       featured: input.featured,
       isNew: input.isNew,
       status: input.status,
-      primaryCtaMode: "add_to_cart",
+      primaryCtaMode: input.primaryCtaMode,
       createdAt: nowIso(),
       updatedAt: nowIso(),
       images: [
@@ -600,8 +737,34 @@ export async function upsertAdminProduct(input: {
           sortOrder: 1,
         },
       ],
-      specs: [],
+      specs:
+        input.specs?.map((spec, index) => ({
+          id: `${newProductId}-spec-${index + 1}`,
+          productId: newProductId,
+          key: spec.key,
+          value: spec.value,
+          sortOrder: index + 1,
+        })) ?? [],
     };
+    if (input.primaryImageUrl) {
+      newProduct.images[0] = {
+        ...newProduct.images[0],
+        url: input.primaryImageUrl,
+        alt: input.primaryImageAlt ?? `${input.title} product image`,
+      };
+    }
+    if (input.imageUrls && input.imageUrls.length > 0) {
+      newProduct.images = input.imageUrls.map((url, index) => ({
+        id: `${newProductId}-img-${index + 1}`,
+        productId: newProductId,
+        url,
+        alt:
+          index === 0
+            ? input.primaryImageAlt ?? `${input.title} product image`
+            : `${input.title} product image ${index + 1}`,
+        sortOrder: index + 1,
+      }));
+    }
     upsertFallbackProduct(newProduct);
     return;
   }
@@ -618,6 +781,7 @@ export async function upsertAdminProduct(input: {
         quantity: input.quantity,
         featured: input.featured,
         is_new: input.isNew,
+        primary_cta_mode: input.primaryCtaMode,
         status: input.status,
       })
       .eq("id", input.id);
@@ -626,29 +790,235 @@ export async function upsertAdminProduct(input: {
       throw new Error(error.message);
     }
 
+    if (input.imageUrls) {
+      const { error: deleteImagesError } = await serviceClient
+        .from("product_images")
+        .delete()
+        .eq("product_id", input.id);
+
+      if (deleteImagesError) {
+        throw new Error(deleteImagesError.message);
+      }
+
+      if (input.imageUrls.length > 0) {
+        const { error: insertImagesError } = await serviceClient.from("product_images").insert(
+          input.imageUrls.map((url, index) => ({
+            product_id: input.id,
+            url,
+            alt:
+              index === 0
+                ? input.primaryImageAlt ?? `${input.title} product image`
+                : `${input.title} product image ${index + 1}`,
+            sort_order: index + 1,
+          })),
+        );
+
+        if (insertImagesError) {
+          throw new Error(insertImagesError.message);
+        }
+      }
+    } else if (input.primaryImageUrl) {
+      const { error: imageError } = await serviceClient.from("product_images").upsert(
+        {
+          product_id: input.id,
+          url: input.primaryImageUrl,
+          alt: input.primaryImageAlt ?? `${input.title} product image`,
+          sort_order: 1,
+        },
+        { onConflict: "product_id,sort_order" },
+      );
+
+      if (imageError) {
+        throw new Error(imageError.message);
+      }
+    }
+
+    if (input.specs) {
+      const { error: deleteSpecsError } = await serviceClient
+        .from("product_specs")
+        .delete()
+        .eq("product_id", input.id);
+
+      if (deleteSpecsError) {
+        throw new Error(deleteSpecsError.message);
+      }
+
+      if (input.specs.length > 0) {
+        const { error: insertSpecsError } = await serviceClient.from("product_specs").insert(
+          input.specs.map((spec, index) => ({
+            product_id: input.id,
+            key: spec.key,
+            value: spec.value,
+            sort_order: index + 1,
+          })),
+        );
+
+        if (insertSpecsError) {
+          throw new Error(insertSpecsError.message);
+        }
+      }
+    }
+
     return;
   }
 
-  const { error } = await serviceClient.from("products").insert({
-    slug,
-    title: input.title,
-    brand: input.brand,
-    category: input.category,
-    subtype: input.category === "watch" ? "analog_watch" : "frame",
-    short_description: "New product draft",
-    description: "Product details pending update.",
-    price: input.price,
-    currency: "EUR",
-    stock_status: input.stockStatus,
-    quantity: input.quantity,
-    featured: input.featured,
-    is_new: input.isNew,
-    status: input.status,
-    primary_cta_mode: "add_to_cart",
-  });
+  const { data: createdProduct, error } = await serviceClient
+    .from("products")
+    .insert({
+      slug,
+      title: input.title,
+      brand: input.brand,
+      category: input.category,
+      subtype: input.category === "watch" ? "analog_watch" : "frame",
+      short_description: "New product draft",
+      description: "Product details pending update.",
+      price: input.price,
+      currency: "EUR",
+      stock_status: input.stockStatus,
+      quantity: input.quantity,
+      featured: input.featured,
+      is_new: input.isNew,
+      status: input.status,
+      primary_cta_mode: input.primaryCtaMode,
+    })
+    .select("id")
+    .single();
 
   if (error) {
     throw new Error(error.message);
+  }
+
+  if (input.imageUrls && input.imageUrls.length > 0) {
+    const { error: insertImagesError } = await serviceClient.from("product_images").insert(
+      input.imageUrls.map((url, index) => ({
+        product_id: createdProduct.id,
+        url,
+        alt:
+          index === 0
+            ? input.primaryImageAlt ?? `${input.title} product image`
+            : `${input.title} product image ${index + 1}`,
+        sort_order: index + 1,
+      })),
+    );
+
+    if (insertImagesError) {
+      throw new Error(insertImagesError.message);
+    }
+  } else if (input.primaryImageUrl) {
+    const { error: imageError } = await serviceClient.from("product_images").upsert(
+      {
+        product_id: createdProduct.id,
+        url: input.primaryImageUrl,
+        alt: input.primaryImageAlt ?? `${input.title} product image`,
+        sort_order: 1,
+      },
+      { onConflict: "product_id,sort_order" },
+    );
+
+    if (imageError) {
+      throw new Error(imageError.message);
+    }
+  }
+
+  if (input.specs && input.specs.length > 0) {
+    const { error: insertSpecsError } = await serviceClient.from("product_specs").insert(
+      input.specs.map((spec, index) => ({
+        product_id: createdProduct.id,
+        key: spec.key,
+        value: spec.value,
+        sort_order: index + 1,
+      })),
+    );
+
+    if (insertSpecsError) {
+      throw new Error(insertSpecsError.message);
+    }
+  }
+}
+
+export async function uploadAdminProductPrimaryImage(input: {
+  productId: string;
+  imageAlt?: string | null;
+  fileName: string;
+  fileType: string;
+  fileBytes: Uint8Array;
+}) {
+  const safeName = sanitizeFileName(input.fileName);
+  const fileType = input.fileType || "image/jpeg";
+  const serviceClient = createSupabaseServiceClient();
+
+  if (!fileType.startsWith("image/")) {
+    throw new Error("Only image files are allowed for product uploads.");
+  }
+
+  if (!serviceClient) {
+    const existing = getFallbackProducts().find((product) => product.id === input.productId);
+    if (!existing) {
+      throw new Error("Product not found.");
+    }
+
+    const primaryImage = existing.images.find((image) => image.sortOrder === 1);
+    const nextPrimary = {
+      ...(primaryImage ?? {
+        id: `${existing.id}-img-${Date.now()}`,
+        productId: existing.id,
+        sortOrder: 1,
+      }),
+      url: `/uploads/products/${existing.id}/${safeName}`,
+      alt:
+        input.imageAlt?.trim() ||
+        primaryImage?.alt ||
+        `${existing.title} product image`,
+    };
+
+    upsertFallbackProduct({
+      ...existing,
+      updatedAt: nowIso(),
+      images: [nextPrimary, ...existing.images.filter((image) => image.sortOrder !== 1)],
+    });
+    return;
+  }
+
+  const path = `${input.productId}/${Date.now()}-${safeName}`;
+  const { error: uploadError } = await serviceClient.storage
+    .from("products")
+    .upload(path, input.fileBytes, {
+      contentType: fileType,
+      upsert: false,
+    });
+
+  if (uploadError) {
+    throw new Error(uploadError.message);
+  }
+
+  const { data } = serviceClient.storage.from("products").getPublicUrl(path);
+
+  const { data: existingProduct, error: productError } = await serviceClient
+    .from("products")
+    .select("title")
+    .eq("id", input.productId)
+    .single();
+
+  if (productError || !existingProduct) {
+    await serviceClient.storage.from("products").remove([path]);
+    throw new Error(productError?.message ?? "Product not found.");
+  }
+
+  const { error: imageError } = await serviceClient.from("product_images").upsert(
+    {
+      product_id: input.productId,
+      url: data.publicUrl,
+      alt:
+        input.imageAlt?.trim() ||
+        `${String(existingProduct.title)} product image`,
+      sort_order: 1,
+    },
+    { onConflict: "product_id,sort_order" },
+  );
+
+  if (imageError) {
+    await serviceClient.storage.from("products").remove([path]);
+    throw new Error(imageError.message);
   }
 }
 
@@ -839,6 +1209,47 @@ export async function upsertAdminJournalPost(input: {
   }
 }
 
+export async function uploadAdminJournalCoverImage(input: {
+  journalId: string;
+  fileName: string;
+  fileType: string;
+  fileBytes: Uint8Array;
+}) {
+  const safeName = sanitizeFileName(input.fileName);
+  const fileType = input.fileType || "image/jpeg";
+  const serviceClient = createSupabaseServiceClient();
+
+  if (!serviceClient) {
+    updateFallbackJournalCoverImage(
+      input.journalId,
+      `/uploads/journal/${input.journalId}/${safeName}`,
+    );
+    return;
+  }
+
+  const path = `${input.journalId}/${Date.now()}-${safeName}`;
+  const { error: uploadError } = await serviceClient.storage
+    .from("journal")
+    .upload(path, input.fileBytes, {
+      contentType: fileType,
+      upsert: false,
+    });
+
+  if (uploadError) {
+    throw new Error(uploadError.message);
+  }
+
+  const { data } = serviceClient.storage.from("journal").getPublicUrl(path);
+  const { error } = await serviceClient
+    .from("journal_posts")
+    .update({ cover_image: data.publicUrl })
+    .eq("id", input.journalId);
+
+  if (error) {
+    throw new Error(error.message);
+  }
+}
+
 export async function listPublishedJournalPosts() {
   return (await listAdminJournalPosts({ status: "published" })).sort((a, b) =>
     (b.publishedAt ?? "").localeCompare(a.publishedAt ?? ""),
@@ -900,6 +1311,7 @@ export async function getExtendedSiteSettings(): Promise<
   const byKey = new Map(entries.map((entry) => [entry.key, entry.value]));
 
   return {
+    businessName: byKey.get("business.name") ?? mockSiteSettings.businessName,
     heroHeadline: byKey.get("hero.headline") ?? mockSiteSettings.heroHeadline,
     heroSubheadline:
       byKey.get("hero.subheadline") ?? mockSiteSettings.heroSubheadline,
@@ -923,8 +1335,17 @@ export async function getExtendedSiteSettings(): Promise<
     storeAddress: byKey.get("store.address") ?? mockSiteSettings.storeAddress,
     storeHours: byKey.get("store.hours") ?? mockSiteSettings.storeHours,
     storePhone: byKey.get("store.phone") ?? mockSiteSettings.storePhone,
+    storeEmail: byKey.get("store.email") ?? mockSiteSettings.storeEmail,
     storeWhatsapp: byKey.get("store.whatsapp") ?? mockSiteSettings.storeWhatsapp,
     mapUrl: byKey.get("store.map_url") ?? mockSiteSettings.mapUrl,
+    homeDeliveryFee:
+      byKey.get("commerce.delivery_fee_home") ?? mockSiteSettings.homeDeliveryFee,
+    defaultSeoTitle:
+      byKey.get("seo.default_title") ?? mockSiteSettings.defaultSeoTitle,
+    defaultSeoDescription:
+      byKey.get("seo.default_description") ?? mockSiteSettings.defaultSeoDescription,
+    defaultSeoImage:
+      byKey.get("seo.default_image") ?? mockSiteSettings.defaultSeoImage,
     aboutIntro:
       byKey.get("about.intro") ??
       "BERIL is a local boutique for watches, eyewear, and trusted service.",
@@ -964,75 +1385,111 @@ export async function listAdminCustomers({
     listAdminContacts(),
   ]);
 
-  const customers = new Map<string, AdminCustomerRow>();
-
-  const touchCustomer = (
-    key: string,
-    data: Partial<AdminCustomerRow> & { timestamp: string },
-  ) => {
-    const existing = customers.get(key);
-    if (!existing) {
-      customers.set(key, {
-        key,
-        name: data.name ?? "Unknown",
-        email: data.email ?? null,
-        phone: data.phone ?? null,
-        orderCount: data.orderCount ?? 0,
-        repairCount: data.repairCount ?? 0,
-        contactCount: data.contactCount ?? 0,
-        lastActivityAt: data.timestamp,
-      });
-      return;
-    }
-
-    existing.name = data.name ?? existing.name;
-    existing.email = data.email ?? existing.email;
-    existing.phone = data.phone ?? existing.phone;
-    existing.orderCount += data.orderCount ?? 0;
-    existing.repairCount += data.repairCount ?? 0;
-    existing.contactCount += data.contactCount ?? 0;
-    if (data.timestamp > existing.lastActivityAt) {
-      existing.lastActivityAt = data.timestamp;
-    }
+  type CustomerAccumulator = AdminCustomerRow & {
+    latestOrderAt: string | null;
+    latestRepairAt: string | null;
+    latestContactAt: string | null;
   };
+
+  const customers = new Map<string, CustomerAccumulator>();
+
+  function ensureCustomer(
+    key: string,
+    seed: { name?: string; email?: string | null; phone?: string | null; timestamp: string },
+  ) {
+    const existing = customers.get(key);
+    if (existing) {
+      existing.name = seed.name ?? existing.name;
+      existing.email = seed.email ?? existing.email;
+      existing.phone = seed.phone ?? existing.phone;
+      if (seed.timestamp > existing.lastActivityAt) {
+        existing.lastActivityAt = seed.timestamp;
+      }
+      return existing;
+    }
+
+    const created: CustomerAccumulator = {
+      key,
+      name: seed.name ?? "Unknown",
+      email: seed.email ?? null,
+      phone: seed.phone ?? null,
+      orderCount: 0,
+      repairCount: 0,
+      contactCount: 0,
+      latestOrderCode: null,
+      latestRepairCode: null,
+      latestContactSubject: null,
+      lastActivityAt: seed.timestamp,
+      latestOrderAt: null,
+      latestRepairAt: null,
+      latestContactAt: null,
+    };
+    customers.set(key, created);
+    return created;
+  }
 
   for (const order of orders) {
     const key = getFallbackCustomerKey(order.email, order.phone);
-    touchCustomer(key, {
+    const customer = ensureCustomer(key, {
       name: order.customerName,
       email: order.email,
       phone: order.phone,
-      orderCount: 1,
       timestamp: order.createdAt,
     });
+    customer.orderCount += 1;
+    if (!customer.latestOrderAt || order.createdAt > customer.latestOrderAt) {
+      customer.latestOrderAt = order.createdAt;
+      customer.latestOrderCode = order.orderCode;
+    }
   }
 
   for (const repair of repairs) {
     const key = getFallbackCustomerKey(repair.email, repair.phone);
-    touchCustomer(key, {
+    const customer = ensureCustomer(key, {
       name: repair.customerName,
       email: repair.email,
       phone: repair.phone,
-      repairCount: 1,
       timestamp: repair.createdAt,
     });
+    customer.repairCount += 1;
+    if (!customer.latestRepairAt || repair.createdAt > customer.latestRepairAt) {
+      customer.latestRepairAt = repair.createdAt;
+      customer.latestRepairCode = repair.repairCode;
+    }
   }
 
   for (const contact of contacts) {
     const key = getFallbackCustomerKey(contact.email, contact.phone);
-    touchCustomer(key, {
+    const customer = ensureCustomer(key, {
       name: contact.name,
       email: contact.email,
       phone: contact.phone,
-      contactCount: 1,
       timestamp: contact.createdAt,
     });
+    customer.contactCount += 1;
+    if (!customer.latestContactAt || contact.createdAt > customer.latestContactAt) {
+      customer.latestContactAt = contact.createdAt;
+      customer.latestContactSubject = contact.subject;
+    }
   }
 
   return Array.from(customers.values())
     .filter((entry) =>
       includesSearch(`${entry.name} ${entry.email ?? ""} ${entry.phone ?? ""}`, search),
     )
+    .map((entry) => ({
+      key: entry.key,
+      name: entry.name,
+      email: entry.email,
+      phone: entry.phone,
+      orderCount: entry.orderCount,
+      repairCount: entry.repairCount,
+      contactCount: entry.contactCount,
+      latestOrderCode: entry.latestOrderCode,
+      latestRepairCode: entry.latestRepairCode,
+      latestContactSubject: entry.latestContactSubject,
+      lastActivityAt: entry.lastActivityAt,
+    }))
     .sort((a, b) => b.lastActivityAt.localeCompare(a.lastActivityAt));
 }
 

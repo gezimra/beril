@@ -175,6 +175,54 @@ Launch SEO rules:
 - Key pages achieve the performance target direction and avoid heavy client-side bloat.
 - Launch checklist is complete for production deployment.
 
+## Launch Checklist
+
+- Store identity content is finalized in admin settings:
+  - business name
+  - phone
+  - email
+  - WhatsApp number
+  - address
+  - opening hours
+- Homepage, About, Service, and Contact copy is reviewed in Albanian.
+- Product catalog has real images, pricing, and stock states for launch assortment.
+- Repair request and repair tracking are tested against live stage data.
+- Checkout is tested for both delivery modes and both offline payment modes.
+- Legal routes are published and linked in footer:
+  - `/privacy-policy`
+  - `/terms`
+  - `/cookies`
+- SEO metadata is verified on key routes:
+  - `/`
+  - `/watches`
+  - `/eyewear`
+  - `/products/[slug]`
+  - `/service`
+  - `/contact`
+  - `/journal`
+- Structured data scripts are present on homepage, contact, product detail, and journal detail pages.
+- GA4 measurement ID is configured and event fire checks pass for:
+  - `product_view`
+  - `add_to_cart`
+  - `begin_checkout`
+  - `place_order`
+  - `repair_request_submit`
+  - `repair_track_search`
+  - `click_whatsapp`
+  - `click_call`
+  - `map_click`
+- Supabase production env values are prepared for deploy:
+  - `NEXT_PUBLIC_SUPABASE_URL`
+  - `NEXT_PUBLIC_SUPABASE_ANON_KEY`
+  - `SUPABASE_SERVICE_ROLE_KEY`
+  - `SUPABASE_DB_URL`
+- Accessibility smoke checks pass:
+  - keyboard navigation for header, forms, and admin controls
+  - visible focus states
+  - form labels and error states
+  - heading hierarchy on key pages
+- Performance smoke checks pass on homepage, catalogs, product detail, checkout, and service routes.
+
 ## Deferred
 
 - Full bilingual SEO strategy.

@@ -1,4 +1,5 @@
 import {
+  uploadRepairAttachmentAction,
   updateRepairEstimateAction,
   updateRepairNotesAction,
   updateRepairStatusAction,
@@ -186,6 +187,65 @@ export default async function AdminRepairsPage({
                     Save Estimate
                   </button>
                 </form>
+              </div>
+
+              <div className="grid gap-3 md:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
+                <form
+                  action={uploadRepairAttachmentAction}
+                  className="space-y-2 rounded-lg border border-graphite/12 bg-white/70 p-3"
+                >
+                  <input type="hidden" name="repairId" value={repair.id} />
+                  <label className="text-xs uppercase tracking-[0.12em] text-graphite/62">
+                    Staff attachment
+                  </label>
+                  <input
+                    name="fileLabel"
+                    placeholder="Attachment label (optional)"
+                    className="w-full rounded-lg border border-graphite/18 bg-white/85 px-3 py-2 text-sm"
+                  />
+                  <input
+                    type="file"
+                    name="attachment"
+                    accept="image/*,.pdf"
+                    required
+                    className="w-full rounded-lg border border-graphite/18 bg-white/85 px-3 py-2 text-xs"
+                  />
+                  <p className="text-xs text-graphite/62">Max upload size: 8MB</p>
+                  <button
+                    type="submit"
+                    className="inline-flex h-9 items-center rounded-full border border-graphite/18 bg-white/85 px-4 text-xs uppercase tracking-[0.12em] text-graphite"
+                  >
+                    Upload
+                  </button>
+                </form>
+
+                <article className="rounded-lg border border-graphite/12 bg-white/70 p-3">
+                  <p className="text-xs uppercase tracking-[0.12em] text-graphite/62">
+                    Attachments
+                  </p>
+                  {repair.attachments.length === 0 ? (
+                    <p className="mt-2 text-sm text-graphite/72">No attachments yet.</p>
+                  ) : (
+                    <ul className="mt-2 space-y-2 text-sm text-graphite/78">
+                      {repair.attachments.map((attachment) => (
+                        <li
+                          key={attachment.id}
+                          className="rounded-lg border border-graphite/10 bg-white/80 px-3 py-2"
+                        >
+                          <a
+                            href={attachment.fileUrl}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="font-medium text-graphite underline"
+                          >
+                            {attachment.fileLabel ?? "Attachment"}
+                          </a>
+                          <p className="text-xs text-graphite/65">{attachment.fileType}</p>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </article>
               </div>
             </article>
           ))

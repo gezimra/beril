@@ -7,6 +7,14 @@ import { StatusBadge } from "@/components/ui/status-badge";
 export const metadata: Metadata = {
   title: "Terms and Conditions",
   description: "Terms and conditions for BERIL website and services.",
+  alternates: {
+    canonical: "/terms",
+  },
+  openGraph: {
+    title: "BERIL Terms and Conditions",
+    description: "Terms for BERIL product orders and service workflows.",
+    images: [{ url: "/placeholders/product-default.svg" }],
+  },
 };
 
 export default function TermsPage() {

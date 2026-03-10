@@ -39,6 +39,7 @@ function buildProduct(product: Omit<Product, "images" | "specs" | "createdAt" | 
 }
 
 export const mockSiteSettings: SiteSettings = {
+  businessName: "BERIL",
   heroHeadline: "Precision in Time & Vision",
   heroSubheadline:
     "Ora te kuruara, syze te rafinuara dhe servis i besuar ne Gjilan.",
@@ -61,9 +62,15 @@ export const mockSiteSettings: SiteSettings = {
   storeAddress: "Rruga e Qytetit, Gjilan 60000, Kosovo",
   storeHours: "Hene - Shtune, 09:00 - 19:00",
   storePhone: "+383 44 000 000",
+  storeEmail: "info@beril.store",
   storeWhatsapp: "+383 44 000 000",
   mapUrl:
     "https://www.google.com/maps/search/?api=1&query=Gjilan+Kosovo",
+  homeDeliveryFee: "3.00",
+  defaultSeoTitle: "BERIL | Ora dhe Syze ne Gjilan",
+  defaultSeoDescription:
+    "Ora te kuruara, syze te rafinuara dhe servis i besuar ne Gjilan.",
+  defaultSeoImage: "/placeholders/product-default.svg",
 };
 
 export const mockProducts: Product[] = [

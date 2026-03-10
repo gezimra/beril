@@ -1,14 +1,25 @@
 import type { Product } from "@/types/product";
 import type { SiteSettings } from "@/types/site-settings";
 import type { AdminJournalPost } from "@/types/admin";
+import { env } from "@/lib/env";
+
+function toAbsoluteUrl(urlOrPath: string) {
+  if (/^https?:\/\//i.test(urlOrPath)) {
+    return urlOrPath;
+  }
+  const base = env.client.siteUrl.replace(/\/+$/, "");
+  const suffix = urlOrPath.startsWith("/") ? urlOrPath : `/${urlOrPath}`;
+  return `${base}${suffix}`;
+}
 
 export function localBusinessJsonLd(settings: SiteSettings) {
   return {
     "@context": "https://schema.org",
     "@type": "LocalBusiness",
-    name: "BERIL",
-    image: "/placeholders/product-default.svg",
+    name: settings.businessName,
+    image: toAbsoluteUrl(settings.defaultSeoImage),
     telephone: settings.storePhone,
+    email: settings.storeEmail,
     address: {
       "@type": "PostalAddress",
       streetAddress: settings.storeAddress,
@@ -16,7 +27,7 @@ export function localBusinessJsonLd(settings: SiteSettings) {
       addressCountry: "XK",
     },
     openingHours: settings.storeHours,
-    url: "https://beril.store",
+    url: toAbsoluteUrl("/"),
     areaServed: "Kosovo",
   };
 }
@@ -41,7 +52,7 @@ export function productJsonLd(product: Product) {
     "@context": "https://schema.org",
     "@type": "Product",
     name: `${product.brand} ${product.title}`,
-    image: product.images.map((image) => image.url),
+    image: product.images.map((image) => toAbsoluteUrl(image.url)),
     description: product.shortDescription,
     brand: {
       "@type": "Brand",
@@ -65,7 +76,7 @@ export function articleJsonLd(post: AdminJournalPost) {
     "@type": "Article",
     headline: post.title,
     description: post.excerpt,
-    image: post.coverImage ? [post.coverImage] : [],
+    image: post.coverImage ? [toAbsoluteUrl(post.coverImage)] : [],
     datePublished: post.publishedAt ?? post.createdAt,
     dateModified: post.updatedAt,
     author: {

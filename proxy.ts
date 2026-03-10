@@ -15,7 +15,10 @@ export async function proxy(request: NextRequest) {
   const supabase = createSupabaseMiddlewareClient(request, response);
 
   if (!supabase) {
-    if (process.env.NODE_ENV === "development") {
+    const allowDevBypass =
+      process.env.NODE_ENV === "development" &&
+      process.env.ALLOW_DEV_ADMIN_BYPASS === "true";
+    if (allowDevBypass) {
       return response;
     }
     return NextResponse.redirect(unauthorized);

@@ -1,5 +1,7 @@
 import Link from "next/link";
 
+import { requestPasswordResetAction } from "@/app/(auth)/actions";
+
 export const metadata = {
   title: "Reset Password",
   robots: {
@@ -8,26 +10,80 @@ export const metadata = {
   },
 };
 
-export default function ResetPasswordPage() {
+type ResetPasswordPageProps = {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+};
+
+function firstParam(value: string | string[] | undefined) {
+  if (Array.isArray(value)) {
+    return value[0];
+  }
+  return value;
+}
+
+function getResetErrorMessage(errorCode?: string) {
+  if (!errorCode) {
+    return null;
+  }
+
+  switch (errorCode) {
+    case "invalid_email":
+      return "Please enter a valid email address.";
+    case "auth_unavailable":
+      return "Auth service is not configured.";
+    case "reset_failed":
+      return "Unable to send reset link right now.";
+    default:
+      return "Reset request failed.";
+  }
+}
+
+export default async function ResetPasswordPage({
+  searchParams,
+}: ResetPasswordPageProps) {
+  const query = await searchParams;
+  const errorCode = firstParam(query.error);
+  const sent = firstParam(query.sent) === "1";
+  const message = getResetErrorMessage(errorCode);
+
   return (
     <div className="space-y-6">
       <div>
         <p className="text-xs uppercase tracking-[0.2em] text-graphite/65">BERIL</p>
         <h1 className="mt-2 text-4xl text-graphite">Reset Password</h1>
         <p className="mt-3 text-sm text-graphite/72">
-          Password reset integration is planned in the admin operations phase.
+          Request a reset link for your owner account.
         </p>
       </div>
 
-      <form className="space-y-4" aria-label="Reset password form">
+      {message ? (
+        <p className="rounded-lg border border-walnut/35 bg-walnut/10 px-3 py-2 text-sm text-walnut">
+          {message}
+        </p>
+      ) : null}
+
+      {sent ? (
+        <p className="rounded-lg border border-mineral/35 bg-mineral/10 px-3 py-2 text-sm text-mineral">
+          Reset link sent. Check your inbox.
+        </p>
+      ) : null}
+
+      <form
+        action={requestPasswordResetAction}
+        className="space-y-4"
+        aria-label="Reset password form"
+      >
         <div className="space-y-1">
           <label htmlFor="email" className="text-sm font-medium text-graphite">
             Email
           </label>
           <input
             id="email"
+            name="email"
             type="email"
             placeholder="owner@beril.store"
+            required
+            autoComplete="email"
             className="w-full rounded-xl border border-graphite/20 bg-white/80 px-4 py-3 text-sm"
           />
         </div>

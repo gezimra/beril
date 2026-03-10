@@ -10,6 +10,15 @@ export const metadata: Metadata = {
   title: "Journal",
   description:
     "Insights on watches, eyewear, and service care from BERIL in Gjilan.",
+  alternates: {
+    canonical: "/journal",
+  },
+  openGraph: {
+    title: "BERIL Journal",
+    description:
+      "Practical guides on watches, eyewear, and repair care from BERIL Gjilan.",
+    images: [{ url: "/placeholders/product-default.svg" }],
+  },
 };
 
 export default async function JournalPage() {
@@ -35,6 +44,12 @@ export default async function JournalPage() {
           ) : (
             posts.map((post) => (
               <article key={post.id} className="surface-panel p-6">
+                {post.coverImage ? (
+                  <div
+                    className="mb-3 h-40 rounded-lg border border-graphite/10 bg-cover bg-center"
+                    style={{ backgroundImage: `url("${post.coverImage}")` }}
+                  />
+                ) : null}
                 <p className="text-xs uppercase tracking-[0.14em] text-graphite/62">
                   {post.publishedAt
                     ? new Date(post.publishedAt).toLocaleDateString()

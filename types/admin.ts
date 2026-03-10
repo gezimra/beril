@@ -7,6 +7,7 @@ import type {
   RepairStatus,
   StockStatus,
 } from "@/types/domain";
+import type { ProductCtaMode } from "@/types/product";
 
 export interface AdminOrderItem {
   productId: string | null;
@@ -53,6 +54,14 @@ export interface AdminRepairHistoryEvent {
   visibleToCustomer: boolean;
 }
 
+export interface AdminRepairAttachment {
+  id: string;
+  fileUrl: string;
+  fileType: string;
+  fileLabel: string | null;
+  createdAt: string;
+}
+
 export interface AdminRepair {
   id: string;
   repairCode: string;
@@ -73,6 +82,7 @@ export interface AdminRepair {
   createdAt: string;
   updatedAt: string;
   history: AdminRepairHistoryEvent[];
+  attachments: AdminRepairAttachment[];
 }
 
 export interface AdminContact {
@@ -109,6 +119,11 @@ export interface AdminProductRow {
   quantity: number | null;
   featured: boolean;
   isNew: boolean;
+  primaryCtaMode: ProductCtaMode;
+  primaryImageUrl: string | null;
+  primaryImageAlt: string | null;
+  imageUrls: string[];
+  specs: Array<{ key: string; value: string }>;
   status: "draft" | "active" | "archived";
 }
 
@@ -127,5 +142,8 @@ export interface AdminCustomerRow {
   orderCount: number;
   repairCount: number;
   contactCount: number;
+  latestOrderCode: string | null;
+  latestRepairCode: string | null;
+  latestContactSubject: string | null;
   lastActivityAt: string;
 }

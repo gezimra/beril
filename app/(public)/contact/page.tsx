@@ -13,6 +13,14 @@ export const metadata: Metadata = {
   title: "Contact BERIL",
   description:
     "Contact BERIL in Gjilan for watches, eyewear, and repair service.",
+  alternates: {
+    canonical: "/contact",
+  },
+  openGraph: {
+    title: "Contact BERIL",
+    description: "Reach BERIL in Gjilan for products, service, and repair intake.",
+    images: [{ url: "/placeholders/product-default.svg" }],
+  },
 };
 
 function formatPhoneHref(phone: string) {
@@ -58,6 +66,7 @@ export default async function ContactPage() {
               <p className="mt-3 text-sm text-graphite/76">{settings.storeAddress}</p>
               <p className="mt-2 text-sm text-graphite/76">{settings.storeHours}</p>
               <p className="mt-2 text-sm text-graphite/76">{settings.storePhone}</p>
+              <p className="mt-1 text-sm text-graphite/76">{settings.storeEmail}</p>
               <p className="mt-1 text-sm text-graphite/76">{settings.storeWhatsapp}</p>
             </article>
             <article className="surface-panel p-5">
@@ -67,6 +76,8 @@ export default async function ContactPage() {
                   phoneHref={phoneHref}
                   whatsappHref={whatsappHref}
                   mapUrl={settings.mapUrl}
+                  route="/contact"
+                  source="contact_cta"
                 />
               </div>
             </article>

@@ -1,5 +1,9 @@
 import { createSupabaseServiceClient } from "@/lib/db/supabase/service";
-import { addFallbackRepair, getFallbackRepairs } from "@/lib/db/fallback-store";
+import {
+  addFallbackRepair,
+  addFallbackRepairAttachment,
+  getFallbackRepairs,
+} from "@/lib/db/fallback-store";
 import { generateRepairCode, normalizeEmail, normalizePhone } from "@/lib/utils/codes";
 import type { AdminRepair } from "@/types/admin";
 import type { RepairRequestInput } from "@/lib/validations/repair-request";
@@ -8,6 +12,13 @@ import { repairTrackSchema } from "@/lib/validations/repair-track";
 
 interface CreateRepairResult {
   repairCode: string;
+}
+
+export interface RepairAttachmentUploadInput {
+  fileName: string;
+  fileType: string;
+  fileBytes: Uint8Array;
+  fileLabel?: string | null;
 }
 
 interface RepairRequestRow {
@@ -33,6 +44,7 @@ interface RepairStatusRow {
 
 export async function createRepairRequest(
   payload: RepairRequestInput,
+  attachments: RepairAttachmentUploadInput[] = [],
 ): Promise<CreateRepairResult> {
   const serviceClient = createSupabaseServiceClient();
   const repairCode = generateRepairCode(Date.now() % 100000);
@@ -69,6 +81,7 @@ export async function createRepairRequest(
           visibleToCustomer: true,
         },
       ],
+      attachments: [],
     };
     if (payload.dropOffMethod === "bring_to_store") {
       fallbackRepair.history.push({
@@ -78,67 +91,146 @@ export async function createRepairRequest(
         visibleToCustomer: true,
       });
     }
+
     addFallbackRepair(fallbackRepair);
+    for (const attachment of attachments) {
+      const safeName = sanitizeFileName(attachment.fileName);
+      addFallbackRepairAttachment({
+        repairId: fallbackRepair.id,
+        fileUrl: `/uploads/repairs/${fallbackRepair.id}/${Date.now()}-${safeName}`,
+        fileType: attachment.fileType || "application/octet-stream",
+        fileLabel: attachment.fileLabel ?? null,
+      });
+    }
 
     return { repairCode };
   }
 
-  const { data: repair, error: repairError } = await serviceClient
-    .from("repair_requests")
-    .insert({
-      repair_code: repairCode,
-      customer_name: payload.customerName,
-      email: payload.email || null,
-      email_normalized: payload.email ? normalizeEmail(payload.email) : null,
-      phone: payload.phone,
-      phone_normalized: normalizePhone(payload.phone),
-      preferred_contact_method: payload.preferredContactMethod,
-      item_type: payload.itemType,
-      brand: payload.brand,
-      model: payload.model,
-      serial_number: payload.serialNumber || null,
-      purchase_date: payload.purchaseDate || null,
-      service_type: payload.serviceType,
-      description: payload.description,
-      drop_off_method: payload.dropOffMethod,
-      status: "request_received",
-    })
-    .select("id")
-    .single();
+  let repairId: string | null = null;
+  const uploadedPaths: string[] = [];
 
-  if (repairError || !repair) {
-    throw new Error(repairError?.message ?? "Unable to create repair request.");
-  }
+  try {
+    const { data: repair, error: repairError } = await serviceClient
+      .from("repair_requests")
+      .insert({
+        repair_code: repairCode,
+        customer_name: payload.customerName,
+        email: payload.email || null,
+        email_normalized: payload.email ? normalizeEmail(payload.email) : null,
+        phone: payload.phone,
+        phone_normalized: normalizePhone(payload.phone),
+        preferred_contact_method: payload.preferredContactMethod,
+        item_type: payload.itemType,
+        brand: payload.brand,
+        model: payload.model,
+        serial_number: payload.serialNumber || null,
+        purchase_date: payload.purchaseDate || null,
+        service_type: payload.serviceType,
+        description: payload.description,
+        drop_off_method: payload.dropOffMethod,
+        status: "request_received",
+      })
+      .select("id")
+      .single();
 
-  const statusRows: Array<{
-    repair_request_id: string;
-    status: string;
-    note: string | null;
-    visible_to_customer: boolean;
-  }> = [
-    {
-      repair_request_id: repair.id,
-      status: "request_received",
-      note: "Repair request received",
-      visible_to_customer: true,
-    },
-  ];
+    if (repairError || !repair) {
+      throw new Error(repairError?.message ?? "Unable to create repair request.");
+    }
 
-  if (payload.dropOffMethod === "bring_to_store") {
-    statusRows.push({
-      repair_request_id: repair.id,
-      status: "awaiting_drop_off",
-      note: "Awaiting item drop-off",
-      visible_to_customer: true,
-    });
-  }
+    repairId = repair.id;
+    const statusRows: Array<{
+      repair_request_id: string;
+      status: string;
+      note: string | null;
+      visible_to_customer: boolean;
+    }> = [
+      {
+        repair_request_id: repair.id,
+        status: "request_received",
+        note: "Repair request received",
+        visible_to_customer: true,
+      },
+    ];
 
-  const { error: statusError } = await serviceClient
-    .from("repair_status_history")
-    .insert(statusRows);
+    if (payload.dropOffMethod === "bring_to_store") {
+      statusRows.push({
+        repair_request_id: repair.id,
+        status: "awaiting_drop_off",
+        note: "Awaiting item drop-off",
+        visible_to_customer: true,
+      });
+    }
 
-  if (statusError) {
-    throw new Error(statusError.message);
+    const { error: statusError } = await serviceClient
+      .from("repair_status_history")
+      .insert(statusRows);
+
+    if (statusError) {
+      throw new Error(statusError.message);
+    }
+
+    if (attachments.length > 0) {
+      const attachmentRows: Array<{
+        repair_request_id: string;
+        file_url: string;
+        file_type: string;
+        file_label: string | null;
+      }> = [];
+
+      for (const [index, attachment] of attachments.entries()) {
+        const safeName = sanitizeFileName(attachment.fileName);
+        const fileType = attachment.fileType || "application/octet-stream";
+        const path = `${repair.id}/${Date.now()}-${index + 1}-${safeName}`;
+
+        const { error: uploadError } = await serviceClient.storage
+          .from("repairs")
+          .upload(path, attachment.fileBytes, {
+            contentType: fileType,
+            upsert: false,
+          });
+
+        if (uploadError) {
+          throw new Error(uploadError.message);
+        }
+
+        uploadedPaths.push(path);
+        const { data } = serviceClient.storage.from("repairs").getPublicUrl(path);
+        attachmentRows.push({
+          repair_request_id: repair.id,
+          file_url: data.publicUrl,
+          file_type: fileType,
+          file_label: attachment.fileLabel ?? null,
+        });
+      }
+
+      const { error: attachmentsError } = await serviceClient
+        .from("repair_attachments")
+        .insert(attachmentRows);
+
+      if (attachmentsError) {
+        throw new Error(attachmentsError.message);
+      }
+    }
+  } catch (error) {
+    if (uploadedPaths.length > 0) {
+      try {
+        await serviceClient.storage.from("repairs").remove(uploadedPaths);
+      } catch {
+        // Best-effort cleanup for uploaded files.
+      }
+    }
+
+    if (repairId) {
+      try {
+        await serviceClient.from("repair_requests").delete().eq("id", repairId);
+      } catch {
+        // Best-effort cleanup for partial repair rows.
+      }
+    }
+
+    const message =
+      error instanceof Error ? error.message : "Unable to create repair request.";
+    throw new Error(message);
   }
 
   return { repairCode };
@@ -247,4 +339,15 @@ function addFallbackLookup(
       createdAt: event.createdAt,
     })),
   };
+}
+
+function sanitizeFileName(name: string) {
+  const normalized = name
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9._-]+/g, "-")
+    .replace(/-+/g, "-")
+    .replace(/^-|-$/g, "");
+
+  return normalized || "attachment";
 }

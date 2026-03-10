@@ -11,6 +11,15 @@ export const metadata: Metadata = {
   title: "About BERIL",
   description:
     "Learn BERIL's story, values, and approach to watches, eyewear, and trusted service in Gjilan.",
+  alternates: {
+    canonical: "/about",
+  },
+  openGraph: {
+    title: "About BERIL",
+    description:
+      "BERIL combines curated watches, refined eyewear, and trusted service in Gjilan.",
+    images: [{ url: "/placeholders/product-default.svg" }],
+  },
 };
 
 export default async function AboutPage() {

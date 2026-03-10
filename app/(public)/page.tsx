@@ -1,6 +1,7 @@
 import Link from "next/link";
 import Script from "next/script";
 
+import { ContactQuickActions } from "@/components/content/contact-quick-actions";
 import { Container } from "@/components/layout/container";
 import { ProductCard } from "@/components/product/product-card";
 import { SectionWrapper } from "@/components/layout/section-wrapper";
@@ -9,6 +10,16 @@ import { getFeaturedProducts, getMovementLabel } from "@/lib/db/catalog";
 import { getSiteSettings } from "@/lib/db/site-settings";
 import { localBusinessJsonLd } from "@/lib/seo/structured-data";
 
+function formatPhoneHref(phone: string) {
+  const digits = phone.replace(/[^\d+]/g, "");
+  return digits.startsWith("+") ? `tel:${digits}` : `tel:+${digits}`;
+}
+
+function formatWhatsappHref(phone: string) {
+  const digits = phone.replace(/[^\d]/g, "");
+  return `https://wa.me/${digits}`;
+}
+
 export default async function HomePage() {
   const [settings, featuredWatches, featuredEyewear] = await Promise.all([
     getSiteSettings(),
@@ -16,6 +27,8 @@ export default async function HomePage() {
     getFeaturedProducts("eyewear", 4),
   ]);
   const businessJsonLd = localBusinessJsonLd(settings);
+  const phoneHref = formatPhoneHref(settings.storePhone);
+  const whatsappHref = formatWhatsappHref(settings.storeWhatsapp);
 
   return (
     <>
@@ -93,7 +106,7 @@ export default async function HomePage() {
                 View All
               </Link>
             </div>
-            <div className="grid gap-5 sm:grid-cols-2 xl:grid-cols-4">
+            <div className="grid grid-cols-2 gap-4 lg:gap-5 xl:grid-cols-4">
               {featuredWatches.map((product) => (
                 <ProductCard
                   key={product.id}
@@ -114,7 +127,7 @@ export default async function HomePage() {
                 View All
               </Link>
             </div>
-            <div className="grid gap-5 sm:grid-cols-2 xl:grid-cols-4">
+            <div className="grid grid-cols-2 gap-4 lg:gap-5 xl:grid-cols-4">
               {featuredEyewear.map((product) => (
                 <ProductCard key={product.id} product={product} />
               ))}
@@ -149,23 +162,14 @@ export default async function HomePage() {
             <p className="mt-2 text-sm text-graphite/76">
               Phone: {settings.storePhone}
             </p>
-            <div className="mt-6 flex flex-wrap gap-3">
-              <a
-                href={settings.mapUrl}
-                target="_blank"
-                rel="noreferrer"
-                className="inline-flex h-10 items-center rounded-full border border-graphite/20 bg-white/75 px-4 text-xs uppercase tracking-[0.12em] text-graphite"
-              >
-                Get Directions
-              </a>
-              <a
-                href="https://wa.me/38344000000"
-                target="_blank"
-                rel="noreferrer"
-                className="inline-flex h-10 items-center rounded-full border border-mineral/35 bg-mineral/12 px-4 text-xs uppercase tracking-[0.12em] text-mineral"
-              >
-                WhatsApp
-              </a>
+            <div className="mt-6">
+              <ContactQuickActions
+                phoneHref={phoneHref}
+                whatsappHref={whatsappHref}
+                mapUrl={settings.mapUrl}
+                route="/"
+                source="home_store"
+              />
             </div>
           </article>
         </Container>

@@ -7,6 +7,14 @@ import { StatusBadge } from "@/components/ui/status-badge";
 export const metadata: Metadata = {
   title: "Privacy Policy",
   description: "Privacy policy for BERIL website and services.",
+  alternates: {
+    canonical: "/privacy-policy",
+  },
+  openGraph: {
+    title: "BERIL Privacy Policy",
+    description: "Privacy policy for BERIL website and service operations.",
+    images: [{ url: "/placeholders/product-default.svg" }],
+  },
 };
 
 export default function PrivacyPolicyPage() {

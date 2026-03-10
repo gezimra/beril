@@ -6,19 +6,23 @@ interface ContactQuickActionsProps {
   phoneHref: string;
   whatsappHref: string;
   mapUrl: string;
+  route?: string;
+  source?: string;
 }
 
 export function ContactQuickActions({
   phoneHref,
   whatsappHref,
   mapUrl,
+  route = "/contact",
+  source = "contact_cta",
 }: ContactQuickActionsProps) {
   return (
     <div className="flex flex-wrap gap-3">
       <a
         href={phoneHref}
         onClick={() =>
-          trackEvent("click_call", { route: "/contact", source: "contact_cta" })
+          trackEvent("click_call", { route, source, destination: phoneHref })
         }
         className="inline-flex h-10 items-center rounded-full bg-walnut px-4 text-xs uppercase tracking-[0.12em] text-white"
       >
@@ -30,8 +34,8 @@ export function ContactQuickActions({
         rel="noreferrer"
         onClick={() =>
           trackEvent("click_whatsapp", {
-            route: "/contact",
-            source: "contact_cta",
+            route,
+            source,
             destination: whatsappHref,
           })
         }
@@ -45,8 +49,8 @@ export function ContactQuickActions({
         rel="noreferrer"
         onClick={() =>
           trackEvent("map_click", {
-            route: "/contact",
-            source: "contact_cta",
+            route,
+            source,
             destination: mapUrl,
           })
         }

@@ -85,10 +85,10 @@ It translates `/Users/gezimrashiti/Projects/Beril/CONCEPT.md` into a fixed deliv
 | 01 Foundation | `done` | none |
 | 02 Data and Domain | `done` | 01 |
 | 03 Home and Catalog | `done` | 01, 02 |
-| 04 Product and Commerce | `in progress` | 02, 03 |
-| 05 Service and Repairs | `in progress` | 02, 03 |
-| 06 Admin Operations | `not started` | 02, 04, 05 |
-| 07 Content, SEO, Launch | `not started` | 03, 04, 05, 06 |
+| 04 Product and Commerce | `done` | 02, 03 |
+| 05 Service and Repairs | `done` | 02, 03 |
+| 06 Admin Operations | `done` | 02, 04, 05 |
+| 07 Content, SEO, Launch | `done` | 03, 04, 05, 06 |
 | 08 V2 Backlog | `deferred` | after launch |
 
 ## Definition Of Done

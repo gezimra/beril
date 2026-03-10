@@ -126,6 +126,12 @@ export default async function AdminContentPage() {
           className="rounded-lg border border-graphite/18 bg-white/85 px-3 py-2 text-sm"
         />
         <input
+          name="store.email"
+          defaultValue={settings.storeEmail}
+          placeholder="Store email"
+          className="rounded-lg border border-graphite/18 bg-white/85 px-3 py-2 text-sm"
+        />
+        <input
           name="store.whatsapp"
           defaultValue={settings.storeWhatsapp}
           placeholder="Store whatsapp"
@@ -139,10 +145,18 @@ export default async function AdminContentPage() {
         />
         <input
           name="commerce.delivery_fee_home"
-          defaultValue="3.00"
+          defaultValue={settings.homeDeliveryFee}
           placeholder="Home delivery fee"
           className="rounded-lg border border-graphite/18 bg-white/85 px-3 py-2 text-sm"
         />
+        <input type="hidden" name="business.name" value={settings.businessName} />
+        <input type="hidden" name="seo.default_title" value={settings.defaultSeoTitle} />
+        <input
+          type="hidden"
+          name="seo.default_description"
+          value={settings.defaultSeoDescription}
+        />
+        <input type="hidden" name="seo.default_image" value={settings.defaultSeoImage} />
 
         <button
           type="submit"

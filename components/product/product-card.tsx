@@ -2,6 +2,7 @@ import Image from "next/image";
 import Link from "next/link";
 
 import { ProductBadge } from "@/components/product/product-badge";
+import { getProductImageUrl } from "@/lib/utils/product-image";
 import { formatEur } from "@/lib/utils/money";
 import { primaryCtaLabel, stockStatusLabel } from "@/lib/utils/product";
 import type { Product } from "@/types/product";
@@ -13,13 +14,19 @@ interface ProductCardProps {
 
 export function ProductCard({ product, movementLabel }: ProductCardProps) {
   const image = product.images[0];
+  const imageUrl = getProductImageUrl({
+    imageUrl: image?.url,
+    brand: product.brand,
+    title: product.title,
+    category: product.category,
+  });
 
   return (
-    <article className="surface-panel overflow-hidden p-3">
+    <article className="surface-panel overflow-hidden p-2.5 sm:p-3">
       <Link href={`/products/${product.slug}`} className="block">
         <div className="relative aspect-[4/5] overflow-hidden rounded-xl border border-graphite/10 bg-stone/40">
           <Image
-            src={image?.url ?? "/placeholders/product-default.svg"}
+            src={imageUrl}
             alt={image?.alt ?? product.title}
             fill
             sizes="(max-width: 768px) 90vw, (max-width: 1280px) 33vw, 20vw"
@@ -28,12 +35,14 @@ export function ProductCard({ product, movementLabel }: ProductCardProps) {
         </div>
       </Link>
 
-      <div className="mt-4 space-y-2 px-1 pb-2">
-        <p className="text-xs uppercase tracking-[0.16em] text-graphite/62">
+      <div className="mt-3 space-y-1.5 px-0.5 pb-1.5 sm:mt-4 sm:space-y-2 sm:px-1 sm:pb-2">
+        <p className="text-[0.62rem] uppercase tracking-[0.14em] text-graphite/62 sm:text-xs sm:tracking-[0.16em]">
           {product.brand}
         </p>
-        <h3 className="line-clamp-2 text-xl text-graphite">{product.title}</h3>
-        <div className="flex flex-wrap items-center gap-2">
+        <h3 className="line-clamp-2 text-lg leading-snug text-graphite sm:text-xl">
+          {product.title}
+        </h3>
+        <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
           {movementLabel ? (
             <ProductBadge type="movement" value={movementLabel} />
           ) : null}
@@ -44,10 +53,12 @@ export function ProductCard({ product, movementLabel }: ProductCardProps) {
             stockStatus={product.stockStatus}
           />
         </div>
-        <p className="text-lg font-medium text-graphite">{formatEur(product.price)}</p>
+        <p className="text-base font-medium text-graphite sm:text-lg">
+          {formatEur(product.price)}
+        </p>
         <Link
           href={`/products/${product.slug}`}
-          className="inline-flex h-10 items-center rounded-full border border-graphite/18 bg-white/80 px-4 text-xs uppercase tracking-[0.12em] text-graphite transition hover:bg-white"
+          className="inline-flex h-9 items-center rounded-full border border-graphite/18 bg-white/80 px-3 text-[0.62rem] uppercase tracking-[0.1em] text-graphite transition hover:bg-white sm:h-10 sm:px-4 sm:text-xs sm:tracking-[0.12em]"
         >
           {primaryCtaLabel(product)}
         </Link>

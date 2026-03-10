@@ -11,6 +11,7 @@ import type { Product } from "@/types/product";
 const nowIso = () => new Date().toISOString();
 
 const fallbackSiteSettings = new Map<string, string>([
+  ["business.name", mockSiteSettings.businessName],
   ["hero.headline", mockSiteSettings.heroHeadline],
   ["hero.subheadline", mockSiteSettings.heroSubheadline],
   ["hero.primary_cta_label", mockSiteSettings.heroPrimaryCtaLabel],
@@ -22,9 +23,13 @@ const fallbackSiteSettings = new Map<string, string>([
   ["store.address", mockSiteSettings.storeAddress],
   ["store.hours", mockSiteSettings.storeHours],
   ["store.phone", mockSiteSettings.storePhone],
+  ["store.email", mockSiteSettings.storeEmail],
   ["store.whatsapp", mockSiteSettings.storeWhatsapp],
   ["store.map_url", mockSiteSettings.mapUrl],
-  ["commerce.delivery_fee_home", "3.00"],
+  ["commerce.delivery_fee_home", mockSiteSettings.homeDeliveryFee],
+  ["seo.default_title", mockSiteSettings.defaultSeoTitle],
+  ["seo.default_description", mockSiteSettings.defaultSeoDescription],
+  ["seo.default_image", mockSiteSettings.defaultSeoImage],
   ["about.intro", "BERIL is a local boutique for watches, eyewear, and trusted service."],
   ["about.story", "We combine curated selection and practical service care in Gjilan."],
   ["about.values", JSON.stringify(["Precision", "Trust", "Craft", "Calm service"])],
@@ -123,6 +128,19 @@ export function upsertFallbackJournalPost(post: AdminJournalPost) {
   fallbackJournalPosts[index] = post;
 }
 
+export function updateFallbackJournalCoverImage(postId: string, coverImage: string) {
+  const index = fallbackJournalPosts.findIndex((item) => item.id === postId);
+  if (index === -1) {
+    return;
+  }
+
+  fallbackJournalPosts[index] = {
+    ...fallbackJournalPosts[index],
+    coverImage,
+    updatedAt: nowIso(),
+  };
+}
+
 export function updateFallbackSiteSetting(key: string, value: string) {
   fallbackSiteSettings.set(key, value);
 }
@@ -161,6 +179,31 @@ export function updateFallbackRepair(
   };
   fallbackRepairs[index] = updated;
   return updated;
+}
+
+export function addFallbackRepairAttachment(input: {
+  repairId: string;
+  fileUrl: string;
+  fileType: string;
+  fileLabel?: string | null;
+}) {
+  const target = fallbackRepairs.find((repair) => repair.id === input.repairId);
+  if (!target) {
+    return;
+  }
+
+  if (!target.attachments) {
+    target.attachments = [];
+  }
+
+  target.attachments.unshift({
+    id: `att-${Date.now()}`,
+    fileUrl: input.fileUrl,
+    fileType: input.fileType,
+    fileLabel: input.fileLabel ?? null,
+    createdAt: nowIso(),
+  });
+  target.updatedAt = nowIso();
 }
 
 export function upsertFallbackProduct(product: Product) {

@@ -9,11 +9,14 @@ import {
   getPublishedJournalPostBySlug,
   listPublishedJournalPosts,
 } from "@/lib/db/admin";
+import { env } from "@/lib/env";
 import { articleJsonLd, breadcrumbJsonLd } from "@/lib/seo/structured-data";
 
 type JournalDetailPageProps = {
   params: Promise<{ slug: string }>;
 };
+
+const siteUrl = env.client.siteUrl.replace(/\/+$/, "");
 
 export async function generateMetadata({
   params,
@@ -34,9 +37,14 @@ export async function generateMetadata({
   return {
     title: post.title,
     description: post.excerpt,
+    alternates: {
+      canonical: `/journal/${post.slug}`,
+    },
     openGraph: {
       title: post.title,
       description: post.excerpt,
+      type: "article",
+      images: [{ url: post.coverImage ?? "/placeholders/product-default.svg" }],
     },
   };
 }
@@ -56,9 +64,9 @@ export default async function JournalDetailPage({ params }: JournalDetailPagePro
 
   const articleLd = articleJsonLd(post);
   const breadcrumbLd = breadcrumbJsonLd([
-    { position: 1, name: "Home", item: "https://beril.store/" },
-    { position: 2, name: "Journal", item: "https://beril.store/journal" },
-    { position: 3, name: post.title, item: `https://beril.store/journal/${post.slug}` },
+    { position: 1, name: "Home", item: `${siteUrl}/` },
+    { position: 2, name: "Journal", item: `${siteUrl}/journal` },
+    { position: 3, name: post.title, item: `${siteUrl}/journal/${post.slug}` },
   ]);
 
   return (
@@ -79,6 +87,12 @@ export default async function JournalDetailPage({ params }: JournalDetailPagePro
               ? new Date(post.publishedAt).toLocaleDateString()
               : new Date(post.createdAt).toLocaleDateString()}
           </p>
+          {post.coverImage ? (
+            <div
+              className="h-64 rounded-xl border border-graphite/12 bg-cover bg-center"
+              style={{ backgroundImage: `url("${post.coverImage}")` }}
+            />
+          ) : null}
           <article className="surface-panel p-7">
             <p className="text-sm leading-8 text-graphite/78">{post.content}</p>
           </article>

@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import Link from "next/link";
 
+import { logoutAction } from "@/app/(auth)/actions";
 import { Container } from "@/components/layout/container";
 
 const adminLinks = [
@@ -38,6 +39,14 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
               </Link>
             ))}
           </nav>
+          <form action={logoutAction} className="mt-6">
+            <button
+              type="submit"
+              className="inline-flex h-9 items-center rounded-full border border-graphite/18 bg-white/80 px-4 text-xs uppercase tracking-[0.12em] text-graphite"
+            >
+              Sign out
+            </button>
+          </form>
         </aside>
         <section>{children}</section>
       </Container>

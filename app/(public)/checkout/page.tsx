@@ -20,6 +20,7 @@ export default function CheckoutPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [serverError, setServerError] = useState<string | null>(null);
   const [hasTrackedCheckout, setHasTrackedCheckout] = useState(false);
+  const [homeDeliveryFee, setHomeDeliveryFee] = useState(3);
 
   const {
     register,
@@ -67,7 +68,39 @@ export default function CheckoutPage() {
     setHasTrackedCheckout(true);
   }, [hasTrackedCheckout, items.length, subtotal]);
 
-  const deliveryFee = deliveryMethod === "home_delivery" ? 3 : 0;
+  useEffect(() => {
+    let isCancelled = false;
+
+    void fetch("/api/commerce/config")
+      .then(async (response) => {
+        if (!response.ok) {
+          return;
+        }
+
+        const payload = (await response.json()) as {
+          ok: boolean;
+          homeDeliveryFee?: number;
+        };
+
+        if (!payload.ok || typeof payload.homeDeliveryFee !== "number") {
+          return;
+        }
+
+        if (!isCancelled) {
+          setHomeDeliveryFee(payload.homeDeliveryFee);
+        }
+      })
+      .catch(() => {
+        // Keep fallback fee if config fetch fails.
+      });
+
+    return () => {
+      isCancelled = true;
+    };
+  }, []);
+
+  const deliveryFee =
+    deliveryMethod === "home_delivery" ? homeDeliveryFee : 0;
   const total = subtotal + deliveryFee;
 
   const onSubmit = handleSubmit(async (values) => {

@@ -1,4 +1,7 @@
-import { upsertJournalPostAction } from "@/app/admin/actions";
+import {
+  uploadJournalCoverImageAction,
+  upsertJournalPostAction,
+} from "@/app/admin/actions";
 import { Container } from "@/components/layout/container";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { listAdminJournalPosts } from "@/lib/db/admin";
@@ -119,6 +122,12 @@ export default async function AdminJournalPage({
           posts.map((post) => (
             <form key={post.id} action={upsertJournalPostAction} className="surface-panel grid gap-3 p-4">
               <input type="hidden" name="id" value={post.id} />
+              {post.coverImage ? (
+                <div
+                  className="h-40 rounded-lg border border-graphite/10 bg-cover bg-center"
+                  style={{ backgroundImage: `url("${post.coverImage}")` }}
+                />
+              ) : null}
               <input
                 name="title"
                 defaultValue={post.title}
@@ -164,6 +173,45 @@ export default async function AdminJournalPage({
           ))
         )}
       </div>
+
+      {posts.length > 0 ? (
+        <section className="surface-panel space-y-3 p-4">
+          <h2 className="text-2xl text-graphite">Upload Cover Image</h2>
+          <p className="text-sm text-graphite/72">
+            Select a post and upload a cover image used on journal cards and article metadata.
+          </p>
+          <form
+            action={uploadJournalCoverImageAction}
+            className="grid gap-3 sm:grid-cols-[1fr_1fr_auto]"
+          >
+            <select
+              name="journalId"
+              required
+              className="rounded-lg border border-graphite/18 bg-white/85 px-3 py-2 text-sm"
+            >
+              <option value="">Select post</option>
+              {posts.map((post) => (
+                <option key={`${post.id}-upload-option`} value={post.id}>
+                  {post.title}
+                </option>
+              ))}
+            </select>
+            <input
+              type="file"
+              name="coverImage"
+              required
+              accept="image/*"
+              className="w-full rounded-lg border border-graphite/18 bg-white/85 px-3 py-2 text-xs"
+            />
+            <button
+              type="submit"
+              className="inline-flex h-10 items-center justify-center rounded-full border border-graphite/18 bg-white/85 px-5 text-xs uppercase tracking-[0.12em] text-graphite"
+            >
+              Upload
+            </button>
+          </form>
+        </section>
+      ) : null}
     </Container>
   );
 }

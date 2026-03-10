@@ -2,7 +2,7 @@
 
 import { zodResolver } from "@hookform/resolvers/zod";
 import Link from "next/link";
-import { startTransition, useState } from "react";
+import { startTransition, useRef, useState } from "react";
 import { useForm } from "react-hook-form";
 
 import { Container } from "@/components/layout/container";
@@ -67,10 +67,25 @@ function saveFallbackRepair(record: RepairFallbackRecord) {
   }
 }
 
+function appendFiles(formData: FormData, key: string, files: FileList | null) {
+  if (!files || files.length === 0) {
+    return;
+  }
+
+  for (const file of Array.from(files)) {
+    if (file.size > 0) {
+      formData.append(key, file);
+    }
+  }
+}
+
 export default function ServiceRequestPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [repairCode, setRepairCode] = useState<string | null>(null);
+  const itemImagesInputRef = useRef<HTMLInputElement | null>(null);
+  const damageImagesInputRef = useRef<HTMLInputElement | null>(null);
+  const proofOfPurchaseInputRef = useRef<HTMLInputElement | null>(null);
 
   const {
     register,
@@ -102,10 +117,39 @@ export default function ServiceRequestPage() {
     setRepairCode(null);
 
     try {
+      const formData = new FormData();
+      formData.set("customerName", values.customerName);
+      formData.set("phone", values.phone);
+      formData.set("email", values.email || "");
+      formData.set("preferredContactMethod", values.preferredContactMethod);
+      formData.set("itemType", values.itemType);
+      formData.set("brand", values.brand);
+      formData.set("model", values.model);
+      formData.set("serialNumber", values.serialNumber || "");
+      formData.set("purchaseDate", values.purchaseDate || "");
+      formData.set("serviceType", values.serviceType);
+      formData.set("description", values.description);
+      formData.set("dropOffMethod", values.dropOffMethod);
+      formData.set("privacyAccepted", values.privacyAccepted ? "true" : "false");
+      formData.set(
+        "serviceTermsAccepted",
+        values.serviceTermsAccepted ? "true" : "false",
+      );
+      appendFiles(formData, "itemImages", itemImagesInputRef.current?.files ?? null);
+      appendFiles(
+        formData,
+        "damageImages",
+        damageImagesInputRef.current?.files ?? null,
+      );
+      appendFiles(
+        formData,
+        "proofOfPurchase",
+        proofOfPurchaseInputRef.current?.files ?? null,
+      );
+
       const response = await fetch("/api/repairs", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(values),
+        body: formData,
       });
 
       const payload = (await response.json()) as {
@@ -119,6 +163,16 @@ export default function ServiceRequestPage() {
       }
 
       setRepairCode(payload.repairCode);
+      if (itemImagesInputRef.current) {
+        itemImagesInputRef.current.value = "";
+      }
+      if (damageImagesInputRef.current) {
+        damageImagesInputRef.current.value = "";
+      }
+      if (proofOfPurchaseInputRef.current) {
+        proofOfPurchaseInputRef.current.value = "";
+      }
+
       trackEvent("repair_request_submit", {
         route: "/service/request",
         source: "repair_form",
@@ -352,6 +406,7 @@ export default function ServiceRequestPage() {
               </label>
               <input
                 id="itemImages"
+                ref={itemImagesInputRef}
                 type="file"
                 multiple
                 accept="image/*"
@@ -364,6 +419,7 @@ export default function ServiceRequestPage() {
               </label>
               <input
                 id="damageImages"
+                ref={damageImagesInputRef}
                 type="file"
                 multiple
                 accept="image/*"
@@ -376,6 +432,7 @@ export default function ServiceRequestPage() {
               </label>
               <input
                 id="proofOfPurchase"
+                ref={proofOfPurchaseInputRef}
                 type="file"
                 accept="image/*,.pdf"
                 className="w-full rounded-lg border border-graphite/18 bg-white/85 px-3 py-2 text-xs"

@@ -1,5 +1,6 @@
 import { getAllActiveProducts } from "@/lib/db/catalog";
 import { addFallbackOrder } from "@/lib/db/fallback-store";
+import { getSiteSettings } from "@/lib/db/site-settings";
 import { createSupabaseServiceClient } from "@/lib/db/supabase/service";
 import { generateOrderCode, normalizeEmail, normalizePhone } from "@/lib/utils/codes";
 import type { AdminOrder } from "@/types/admin";
@@ -20,10 +21,20 @@ interface CreateOrderResult {
 
 const HOME_DELIVERY_FEE = 3;
 
+function resolveHomeDeliveryFee(value: string) {
+  const parsed = Number.parseFloat(value);
+  if (!Number.isFinite(parsed) || parsed < 0) {
+    return HOME_DELIVERY_FEE;
+  }
+  return parsed;
+}
+
 export async function createOrder({
   checkout,
   items,
 }: CreateOrderInput): Promise<CreateOrderResult> {
+  const settings = await getSiteSettings();
+  const homeDeliveryFee = resolveHomeDeliveryFee(settings.homeDeliveryFee);
   const activeProducts = await getAllActiveProducts();
   const productById = new Map(activeProducts.map((product) => [product.id, product]));
 
@@ -52,7 +63,7 @@ export async function createOrder({
 
   const subtotal = resolvedItems.reduce((sum, item) => sum + item.totalPrice, 0);
   const deliveryFee =
-    checkout.deliveryMethod === "home_delivery" ? HOME_DELIVERY_FEE : 0;
+    checkout.deliveryMethod === "home_delivery" ? homeDeliveryFee : 0;
   const total = subtotal + deliveryFee;
   const orderCode = generateOrderCode(Date.now() % 100000);
 

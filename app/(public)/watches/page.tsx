@@ -1,4 +1,5 @@
 import Link from "next/link";
+import type { Metadata } from "next";
 
 import { Container } from "@/components/layout/container";
 import { ProductCard } from "@/components/product/product-card";
@@ -17,6 +18,20 @@ import {
 
 type WatchesPageProps = {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
+};
+
+export const metadata: Metadata = {
+  title: "Watches in Gjilan",
+  description:
+    "Browse curated watches in Gjilan with filters for movement, strap, dial color, and availability.",
+  alternates: {
+    canonical: "/watches",
+  },
+  openGraph: {
+    title: "BERIL Watches",
+    description: "Curated watches in Gjilan with trusted local support.",
+    images: [{ url: "/placeholders/product-default.svg" }],
+  },
 };
 
 export default async function WatchesPage({ searchParams }: WatchesPageProps) {
@@ -256,7 +271,7 @@ export default async function WatchesPage({ searchParams }: WatchesPageProps) {
                 No watches match these filters. Try broadening your search.
               </div>
             ) : (
-              <div className="grid gap-5 sm:grid-cols-2 xl:grid-cols-3">
+              <div className="grid grid-cols-2 gap-4 lg:gap-5 xl:grid-cols-3">
                 {products.map((product) => (
                   <ProductCard
                     key={product.id}

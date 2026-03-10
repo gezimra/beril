@@ -7,6 +7,14 @@ import { StatusBadge } from "@/components/ui/status-badge";
 export const metadata: Metadata = {
   title: "Cookie Policy",
   description: "Cookie policy for BERIL website.",
+  alternates: {
+    canonical: "/cookies",
+  },
+  openGraph: {
+    title: "BERIL Cookie Policy",
+    description: "Cookie policy and browser data usage for BERIL website.",
+    images: [{ url: "/placeholders/product-default.svg" }],
+  },
 };
 
 export default function CookiesPage() {

@@ -1,4 +1,5 @@
 import Link from "next/link";
+import type { Metadata } from "next";
 
 import { Container } from "@/components/layout/container";
 import { ProductCard } from "@/components/product/product-card";
@@ -16,6 +17,20 @@ import {
 
 type EyewearPageProps = {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
+};
+
+export const metadata: Metadata = {
+  title: "Eyewear in Gjilan",
+  description:
+    "Explore BERIL eyewear in Gjilan with practical filters for frame type, shape, material, and availability.",
+  alternates: {
+    canonical: "/eyewear",
+  },
+  openGraph: {
+    title: "BERIL Eyewear",
+    description: "Refined eyewear in Gjilan with in-store support and adjustments.",
+    images: [{ url: "/placeholders/product-default.svg" }],
+  },
 };
 
 export default async function EyewearPage({ searchParams }: EyewearPageProps) {
@@ -274,7 +289,7 @@ export default async function EyewearPage({ searchParams }: EyewearPageProps) {
                 No eyewear products match these filters. Try broadening your search.
               </div>
             ) : (
-              <div className="grid gap-5 sm:grid-cols-2 xl:grid-cols-3">
+              <div className="grid grid-cols-2 gap-4 lg:gap-5 xl:grid-cols-3">
                 {products.map((product) => (
                   <ProductCard key={product.id} product={product} />
                 ))}

@@ -1,10 +1,37 @@
 import Link from "next/link";
+import type { Metadata } from "next";
 
+import { ContactQuickActions } from "@/components/content/contact-quick-actions";
 import { Container } from "@/components/layout/container";
 import { SectionWrapper } from "@/components/layout/section-wrapper";
 import { StatusBadge } from "@/components/ui/status-badge";
+import { getSiteSettings } from "@/lib/db/site-settings";
 
-export default function ServicePage() {
+export const metadata: Metadata = {
+  title: "Service",
+  description: "Trusted watch and eyewear service requests in Gjilan by BERIL.",
+  alternates: {
+    canonical: "/service",
+  },
+  openGraph: {
+    title: "BERIL Service",
+    description: "Repair intake and maintenance support for watches and eyewear.",
+    images: [{ url: "/placeholders/product-default.svg" }],
+  },
+};
+
+function formatPhoneHref(phone: string) {
+  const digits = phone.replace(/[^\d+]/g, "");
+  return digits.startsWith("+") ? `tel:${digits}` : `tel:+${digits}`;
+}
+
+function formatWhatsappHref(phone: string) {
+  const digits = phone.replace(/[^\d]/g, "");
+  return `https://wa.me/${digits}`;
+}
+
+export default async function ServicePage() {
+  const settings = await getSiteSettings();
   const watchServices = [
     "Battery replacement",
     "Strap replacement",
@@ -22,6 +49,9 @@ export default function ServicePage() {
     "Fitting and alignment",
     "Minor service work",
   ];
+
+  const phoneHref = formatPhoneHref(settings.storePhone);
+  const whatsappHref = formatWhatsappHref(settings.storeWhatsapp);
 
   return (
     <SectionWrapper className="py-16">
@@ -77,6 +107,22 @@ export default function ServicePage() {
             >
               Track Repair
             </Link>
+          </div>
+        </article>
+
+        <article className="surface-panel p-7">
+          <h2 className="text-3xl text-graphite">Need Direct Support?</h2>
+          <p className="mt-3 text-sm text-graphite/76">
+            Call or message BERIL before drop-off if you need guidance on service type.
+          </p>
+          <div className="mt-4">
+            <ContactQuickActions
+              phoneHref={phoneHref}
+              whatsappHref={whatsappHref}
+              mapUrl={settings.mapUrl}
+              route="/service"
+              source="service_cta"
+            />
           </div>
         </article>
       </Container>

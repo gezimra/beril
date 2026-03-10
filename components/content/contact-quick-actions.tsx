@@ -18,13 +18,13 @@ export function ContactQuickActions({
   source = "contact_cta",
 }: ContactQuickActionsProps) {
   return (
-    <div className="flex flex-wrap gap-3">
+    <div className="flex flex-wrap items-center gap-2.5">
       <a
         href={phoneHref}
         onClick={() =>
           trackEvent("click_call", { route, source, destination: phoneHref })
         }
-        className="inline-flex h-10 items-center rounded-full bg-walnut px-4 text-xs uppercase tracking-[0.12em] text-white"
+        className="inline-flex h-10 items-center rounded-full bg-walnut/92 px-4 text-xs uppercase tracking-[0.12em] text-white transition hover:bg-walnut"
       >
         Call
       </a>
@@ -39,7 +39,7 @@ export function ContactQuickActions({
             destination: whatsappHref,
           })
         }
-        className="inline-flex h-10 items-center rounded-full border border-mineral/35 bg-mineral/12 px-4 text-xs uppercase tracking-[0.12em] text-mineral"
+        className="inline-flex h-10 items-center rounded-full border border-mineral/28 bg-mineral/10 px-4 text-xs uppercase tracking-[0.12em] text-mineral transition hover:bg-mineral/14"
       >
         WhatsApp
       </a>
@@ -54,7 +54,7 @@ export function ContactQuickActions({
             destination: mapUrl,
           })
         }
-        className="inline-flex h-10 items-center rounded-full border border-graphite/20 bg-white/75 px-4 text-xs uppercase tracking-[0.12em] text-graphite"
+        className="inline-flex h-10 items-center rounded-full border border-graphite/16 bg-white/82 px-4 text-xs uppercase tracking-[0.12em] text-graphite transition hover:bg-white"
       >
         Get Directions
       </a>

@@ -8,5 +8,5 @@ interface SectionWrapperProps {
 }
 
 export function SectionWrapper({ children, className }: SectionWrapperProps) {
-  return <section className={cn("py-14 sm:py-20", className)}>{children}</section>;
+  return <section className={cn("section-rhythm", className)}>{children}</section>;
 }

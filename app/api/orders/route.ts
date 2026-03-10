@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 
 import { createOrder } from "@/lib/db/orders";
+import { createSupabaseServerClient } from "@/lib/db/supabase/server";
 import { checkoutSchema } from "@/lib/validations/checkout";
 
 const cartItemSchema = z.object({
@@ -36,7 +37,22 @@ export async function POST(request: Request) {
   try {
     const json = await request.json();
     const payload = createOrderBodySchema.parse(json);
-    const order = await createOrder(payload);
+    const supabase = await createSupabaseServerClient();
+    const {
+      data: { user },
+    } = supabase
+      ? await supabase.auth.getUser()
+      : { data: { user: null } };
+
+    const order = await createOrder({
+      ...payload,
+      customerUserId: user?.id ?? null,
+      customerEmail: user?.email ?? null,
+      customerFullName:
+        typeof user?.user_metadata?.full_name === "string"
+          ? user.user_metadata.full_name
+          : null,
+    });
 
     return NextResponse.json({ ok: true, order });
   } catch (error) {

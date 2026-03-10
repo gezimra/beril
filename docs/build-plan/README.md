@@ -26,6 +26,13 @@ It translates `/Users/gezimrashiti/Projects/Beril/CONCEPT.md` into a fixed deliv
 | `06-admin-operations.md` | Auth, admin dashboard, orders, repairs, products, customers, content, settings, journal admin |
 | `07-content-seo-launch.md` | About, contact, journal public routes, legal pages, structured data, launch hardening |
 | `08-v2-backlog.md` | Deferred features that must not block launch |
+| `09-design-refresh.md` | Deferred visual refresh track after launch scope is stabilized |
+| `10-plus-roadmap.md` | Priority view for post-launch execution (`must`, `high value`, `advanced`) |
+| `10-payments-promotions.md` | Online payments, campaigns, sales, coupons |
+| `11-crm-support-automation.md` | Customer 360, support inbox, live chat, automation |
+| `12-inventory-repair-ops.md` | Inventory controls, purchasing, repair operations depth |
+| `13-growth-loyalty-affiliate.md` | Loyalty, referrals, affiliate, growth analytics |
+| `COMPLETION.md` | Final v1 completion record and deferred-scope declaration |
 
 ## Locked Decisions
 
@@ -90,6 +97,17 @@ It translates `/Users/gezimrashiti/Projects/Beril/CONCEPT.md` into a fixed deliv
 | 06 Admin Operations | `done` | 02, 04, 05 |
 | 07 Content, SEO, Launch | `done` | 03, 04, 05, 06 |
 | 08 V2 Backlog | `deferred` | after launch |
+| 09 Design Refresh | `deferred` | 07 |
+| 10 Payments And Promotions | `done` | 07 |
+| 11 CRM, Support, And Automation | `done` | 10 |
+| 12 Inventory And Repair Operations | `done` | 11 |
+| 13 Growth, Loyalty, And Affiliate | `done` | 12 |
+
+## Completion Snapshot (2026-03-10)
+
+- BERIL implementation now includes phases `01` through `13`.
+- Phase `08` and `09` remain intentionally deferred tracks for visual/product expansion, not launch blockers.
+- Post-launch modules (payments/promotions, CRM/support, inventory ops, loyalty/affiliate) are implemented and routed in admin/public APIs.
 
 ## Definition Of Done
 
@@ -128,6 +146,11 @@ A phase is only `done` when all of the following are true:
 | `/admin/content` | 06 |
 | `/admin/settings` | 06 |
 | `/admin/journal` | 06 |
+| `/admin/marketing` | 10 |
+| `/admin/payments` | 10 |
+| `/admin/support` | 11 |
+| `/admin/operations` | 12 |
+| `/admin/growth` | 13 |
 | `/about` | 07 |
 | `/contact` | 07 |
 | `/journal` | 07 |
@@ -153,6 +176,40 @@ A phase is only `done` when all of the following are true:
 | `contacts` | 02 |
 | `journal_posts` | 02 |
 | `site_settings` | 02 |
+| `campaigns` | 10 |
+| `promotions` | 10 |
+| `coupon_codes` | 10 |
+| `coupon_redemptions` | 10 |
+| `payment_transactions` | 10 |
+| `payment_events` | 10 |
+| `refund_transactions` | 10 |
+| `customer_profiles` | 11 |
+| `customer_tags` | 11 |
+| `customer_activity_timeline` | 11 |
+| `support_threads` | 11 |
+| `support_thread_links` | 11 |
+| `support_messages` | 11 |
+| `notification_templates` | 11 |
+| `notification_jobs` | 11 |
+| `notification_logs` | 11 |
+| `stock_movements` | 12 |
+| `stock_reservations` | 12 |
+| `suppliers` | 12 |
+| `purchase_orders` | 12 |
+| `purchase_order_items` | 12 |
+| `repair_work_orders` | 12 |
+| `technician_assignments` | 12 |
+| `repair_parts_used` | 12 |
+| `repair_estimates` | 12 |
+| `loyalty_rules` | 13 |
+| `loyalty_accounts` | 13 |
+| `loyalty_ledger` | 13 |
+| `referral_codes` | 13 |
+| `referral_rewards` | 13 |
+| `affiliates` | 13 |
+| `affiliate_clicks` | 13 |
+| `affiliate_conversions` | 13 |
+| `affiliate_payouts` | 13 |
 | Storage bucket `products` | 02 |
 | Storage bucket `repairs` | 02 |
 | Storage bucket `journal` | 02 |
@@ -195,10 +252,17 @@ A phase is only `done` when all of the following are true:
 | Legal pages | 07 |
 | Metadata, structured data, local SEO | 07 |
 | Accessibility pass and performance pass | 07 |
-| Online payments | 08 |
+| Online payment architecture and transaction records | 10 |
 | Bilingual routing | 08 |
 | Expanded staff roles | 08 |
 | Richer CMS and customer accounts | 08 |
+| Card-online test-mode checkout flow | 10 |
+| Campaigns, sales, and coupons | 10 |
+| Customer 360 and support inbox | 11 |
+| Live chat and notification automation | 11 |
+| Inventory reservation and purchasing | 12 |
+| Technician-based repair operations | 12 |
+| Loyalty, referral, and affiliate systems | 13 |
 
 ## Risks To Control
 

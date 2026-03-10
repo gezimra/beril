@@ -84,7 +84,7 @@ export default async function AdminOrdersPage({
                     {order.email ? ` | ${order.email}` : ""}
                   </p>
                   <p className="text-sm text-graphite/72">
-                    {order.city}, {order.address}
+                    {order.city}, {order.country} | {order.address}
                   </p>
                 </div>
                 <StatusBadge tone="premium">{order.orderStatus}</StatusBadge>

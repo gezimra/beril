@@ -4,12 +4,14 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { startTransition, useState } from "react";
 import { useForm } from "react-hook-form";
 
+import { getMessages } from "@/lib/i18n";
 import { contactSchema, type ContactInput } from "@/lib/validations/contact";
 
 export function ContactForm() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [status, setStatus] = useState<"idle" | "success" | "error">("idle");
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const messages = getMessages();
 
   const {
     register,
@@ -59,29 +61,32 @@ export function ContactForm() {
   });
 
   return (
-    <form onSubmit={onSubmit} className="space-y-4">
-      <div className="grid gap-3 sm:grid-cols-2">
+    <form onSubmit={onSubmit} className="space-y-5">
+      <div className="grid gap-4 sm:grid-cols-2">
         <div className="space-y-1">
-          <label htmlFor="name" className="text-sm font-medium text-graphite">
-            Name
+          <label htmlFor="name" className="label-muted">
+            {messages.contact.form.name}
           </label>
           <input
             id="name"
             {...register("name")}
-            className="w-full rounded-lg border border-graphite/18 bg-white/85 px-3 py-2 text-sm"
+            className="input-premium"
           />
           {errors.name ? (
             <p className="text-xs text-walnut">{errors.name.message}</p>
           ) : null}
         </div>
         <div className="space-y-1">
-          <label htmlFor="phone" className="text-sm font-medium text-graphite">
-            Phone
+          <label htmlFor="phone" className="label-muted">
+            {messages.contact.form.phone}
           </label>
           <input
             id="phone"
+            type="tel"
+            inputMode="tel"
+            autoComplete="tel"
             {...register("phone")}
-            className="w-full rounded-lg border border-graphite/18 bg-white/85 px-3 py-2 text-sm"
+            className="input-premium"
           />
           {errors.phone ? (
             <p className="text-xs text-walnut">{errors.phone.message}</p>
@@ -89,28 +94,30 @@ export function ContactForm() {
         </div>
       </div>
 
-      <div className="grid gap-3 sm:grid-cols-2">
+      <div className="grid gap-4 sm:grid-cols-2">
         <div className="space-y-1">
-          <label htmlFor="email" className="text-sm font-medium text-graphite">
-            Email
+          <label htmlFor="email" className="label-muted">
+            {messages.contact.form.email}
           </label>
           <input
             id="email"
+            type="email"
+            autoComplete="email"
             {...register("email")}
-            className="w-full rounded-lg border border-graphite/18 bg-white/85 px-3 py-2 text-sm"
+            className="input-premium"
           />
           {errors.email ? (
             <p className="text-xs text-walnut">{errors.email.message}</p>
           ) : null}
         </div>
         <div className="space-y-1">
-          <label htmlFor="subject" className="text-sm font-medium text-graphite">
-            Subject
+          <label htmlFor="subject" className="label-muted">
+            {messages.contact.form.subject}
           </label>
           <input
             id="subject"
             {...register("subject")}
-            className="w-full rounded-lg border border-graphite/18 bg-white/85 px-3 py-2 text-sm"
+            className="input-premium"
           />
           {errors.subject ? (
             <p className="text-xs text-walnut">{errors.subject.message}</p>
@@ -119,14 +126,14 @@ export function ContactForm() {
       </div>
 
       <div className="space-y-1">
-        <label htmlFor="message" className="text-sm font-medium text-graphite">
-          Message
+        <label htmlFor="message" className="label-muted">
+          {messages.contact.form.message}
         </label>
         <textarea
           id="message"
-          rows={5}
+          rows={6}
           {...register("message")}
-          className="w-full rounded-lg border border-graphite/18 bg-white/85 px-3 py-2 text-sm"
+          className="textarea-premium min-h-36"
         />
         {errors.message ? (
           <p className="text-xs text-walnut">{errors.message.message}</p>
@@ -135,13 +142,13 @@ export function ContactForm() {
 
       {status === "success" ? (
         <p className="rounded-lg border border-mineral/30 bg-mineral/10 px-3 py-2 text-sm text-mineral">
-          Message sent successfully. BERIL will follow up soon.
+          {messages.contact.form.success}
         </p>
       ) : null}
 
       {status === "error" ? (
         <p className="rounded-lg border border-walnut/35 bg-walnut/10 px-3 py-2 text-sm text-walnut">
-          {errorMessage ?? "Unable to send message."}
+          {errorMessage ?? messages.contact.form.errorFallback}
         </p>
       ) : null}
 
@@ -150,7 +157,7 @@ export function ContactForm() {
         disabled={isSubmitting}
         className="inline-flex h-11 items-center rounded-full bg-walnut px-6 text-sm font-medium text-white disabled:opacity-50"
       >
-        {isSubmitting ? "Sending..." : "Send Message"}
+        {isSubmitting ? messages.contact.form.sending : messages.contact.form.send}
       </button>
     </form>
   );

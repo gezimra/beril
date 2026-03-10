@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 
 import { createContactInquiry } from "@/lib/db/admin";
+import { createSupportThread } from "@/lib/db/crm-support";
 import { contactSchema } from "@/lib/validations/contact";
 
 export async function POST(request: Request) {
@@ -9,6 +10,14 @@ export async function POST(request: Request) {
     const json = await request.json();
     const payload = contactSchema.parse(json);
     await createContactInquiry(payload);
+    await createSupportThread({
+      subject: payload.subject,
+      message: payload.message,
+      channel: "email",
+      customerName: payload.name,
+      customerEmail: payload.email,
+      customerPhone: payload.phone,
+    });
 
     return NextResponse.json({ ok: true });
   } catch (error) {

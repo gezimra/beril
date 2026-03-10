@@ -1,5 +1,11 @@
 import { createSupabaseServiceClient } from "@/lib/db/supabase/service";
 import {
+  addCustomerActivity,
+  ensureCustomerProfile,
+  incrementCustomerRepairStats,
+  queueNotificationJob,
+} from "@/lib/db/crm-support";
+import {
   addFallbackRepair,
   addFallbackRepairAttachment,
   getFallbackRepairs,
@@ -210,6 +216,37 @@ export async function createRepairRequest(
       if (attachmentsError) {
         throw new Error(attachmentsError.message);
       }
+    }
+
+    const customerProfileId = await ensureCustomerProfile({
+      name: payload.customerName,
+      email: payload.email || null,
+      phone: payload.phone,
+    });
+
+    if (customerProfileId) {
+      await incrementCustomerRepairStats(customerProfileId);
+      await addCustomerActivity({
+        customerProfileId,
+        activityType: "repair_created",
+        referenceType: "repair_request",
+        referenceId: repair.id as string,
+        summary: `Kerkesa e servisit ${repairCode} u krijua`,
+        metadata: {
+          serviceType: payload.serviceType,
+          itemType: payload.itemType,
+        },
+      });
+
+      await queueNotificationJob({
+        customerProfileId,
+        channel: payload.email ? "email" : "internal",
+        trigger: "repair_created",
+        payload: {
+          repairCode,
+          serviceType: payload.serviceType,
+        },
+      });
     }
   } catch (error) {
     if (uploadedPaths.length > 0) {

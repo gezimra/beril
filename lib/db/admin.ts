@@ -46,6 +46,7 @@ type OrderRow = {
   customer_name: string;
   phone: string;
   email: string | null;
+  country: string;
   city: string;
   address: string;
   notes: string | null;
@@ -147,6 +148,7 @@ function toAdminOrder(row: OrderRow): AdminOrder {
     customerName: row.customer_name,
     phone: row.phone,
     email: row.email,
+    country: row.country,
     city: row.city,
     address: row.address,
     notes: row.notes,
@@ -267,7 +269,7 @@ export async function listAdminOrders({
     .from("orders")
     .select(
       `
-      id, order_code, customer_name, phone, email, city, address, notes, internal_notes,
+      id, order_code, customer_name, phone, email, country, city, address, notes, internal_notes,
       delivery_method, payment_method, payment_status, order_status, subtotal, delivery_fee, total,
       created_at, updated_at,
       order_items(product_id, product_title_snapshot, product_brand_snapshot, quantity, unit_price, total_price),
@@ -1366,10 +1368,15 @@ export async function updateAdminSiteSetting(key: string, value: string) {
     return;
   }
 
-  const { error } = await serviceClient.from("site_settings").upsert({
-    key,
-    value,
-  });
+  const { error } = await serviceClient
+    .from("site_settings")
+    .upsert(
+      {
+        key,
+        value,
+      },
+      { onConflict: "key" },
+    );
 
   if (error) {
     throw new Error(error.message);

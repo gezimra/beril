@@ -17,15 +17,11 @@ export function ProductBadge({ type, value, stockStatus }: ProductBadgeProps) {
   }
 
   if (type === "stock") {
-    const tone =
-      stockStatus === "in_stock"
-        ? "service"
-        : stockStatus === "limited"
-          ? "warm"
-          : stockStatus === "available_on_request"
-            ? "premium"
-            : "neutral";
+    if (stockStatus === "available_on_request") {
+      return <span className="badge-soft badge-request">{value}</span>;
+    }
 
+    const tone = stockStatus === "in_stock" ? "service" : stockStatus === "limited" ? "warm" : "neutral";
     return <StatusBadge tone={tone}>{value}</StatusBadge>;
   }
 

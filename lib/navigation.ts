@@ -1,14 +1,17 @@
 import type { NavItem } from "@/types/navigation";
+import { getMessages } from "@/lib/i18n";
+
+const messages = getMessages();
 
 export const mainNavItems: NavItem[] = [
-  { label: "Home", href: "/" },
-  { label: "Watches", href: "/watches" },
-  { label: "Eyewear", href: "/eyewear" },
-  { label: "Service", href: "/service" },
-  { label: "Track Repair", href: "/repair-track" },
-  { label: "About", href: "/about" },
-  { label: "Contact", href: "/contact" },
-  { label: "Journal", href: "/journal" },
+  { label: messages.nav.home, href: "/" },
+  { label: messages.nav.watches, href: "/watches" },
+  { label: messages.nav.eyewear, href: "/eyewear" },
+  { label: messages.nav.service, href: "/service" },
+  { label: messages.nav.trackRepair, href: "/repair-track" },
+  { label: messages.nav.about, href: "/about" },
+  { label: messages.nav.contact, href: "/contact" },
+  { label: messages.nav.journal, href: "/journal" },
 ];
 
 export const legalNavItems: NavItem[] = [

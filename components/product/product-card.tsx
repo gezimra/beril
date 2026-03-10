@@ -1,6 +1,7 @@
 import Image from "next/image";
 import Link from "next/link";
 
+import { AddToCartButton } from "@/components/commerce/add-to-cart-button";
 import { ProductBadge } from "@/components/product/product-badge";
 import { getProductImageUrl } from "@/lib/utils/product-image";
 import { formatEur } from "@/lib/utils/money";
@@ -20,6 +21,9 @@ export function ProductCard({ product, movementLabel }: ProductCardProps) {
     title: product.title,
     category: product.category,
   });
+  const canAddToCart =
+    product.primaryCtaMode === "add_to_cart" &&
+    (product.stockStatus === "in_stock" || product.stockStatus === "limited");
 
   return (
     <article className="surface-panel overflow-hidden p-2.5 sm:p-3">
@@ -56,12 +60,31 @@ export function ProductCard({ product, movementLabel }: ProductCardProps) {
         <p className="text-base font-medium text-graphite sm:text-lg">
           {formatEur(product.price)}
         </p>
-        <Link
-          href={`/products/${product.slug}`}
-          className="inline-flex h-9 items-center rounded-full border border-graphite/18 bg-white/80 px-3 text-[0.62rem] uppercase tracking-[0.1em] text-graphite transition hover:bg-white sm:h-10 sm:px-4 sm:text-xs sm:tracking-[0.12em]"
-        >
-          {primaryCtaLabel(product)}
-        </Link>
+        {canAddToCart ? (
+          <AddToCartButton
+            compact
+            label={primaryCtaLabel(product)}
+            item={{
+              productId: product.id,
+              slug: product.slug,
+              title: product.title,
+              brand: product.brand,
+              category: product.category,
+              imageUrl,
+              unitPrice: product.price,
+              quantity: 1,
+              stockStatus: product.stockStatus,
+              ctaMode: product.primaryCtaMode,
+            }}
+          />
+        ) : (
+          <Link
+            href={`/products/${product.slug}`}
+            className="inline-flex h-9 items-center rounded-full border border-graphite/18 bg-white/80 px-3 text-[0.62rem] uppercase tracking-[0.1em] text-graphite transition hover:bg-white sm:h-10 sm:px-4 sm:text-xs sm:tracking-[0.12em]"
+          >
+            {primaryCtaLabel(product)}
+          </Link>
+        )}
       </div>
     </article>
   );

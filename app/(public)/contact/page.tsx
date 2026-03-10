@@ -7,6 +7,7 @@ import { Container } from "@/components/layout/container";
 import { SectionWrapper } from "@/components/layout/section-wrapper";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { getExtendedSiteSettings } from "@/lib/db/admin";
+import { getMessages } from "@/lib/i18n";
 import { localBusinessJsonLd } from "@/lib/seo/structured-data";
 
 export const metadata: Metadata = {
@@ -35,6 +36,7 @@ function formatWhatsappHref(phone: string) {
 
 export default async function ContactPage() {
   const settings = await getExtendedSiteSettings();
+  const messages = getMessages();
   const businessJsonLd = localBusinessJsonLd(settings);
 
   const phoneHref = formatPhoneHref(settings.storePhone);
@@ -46,13 +48,13 @@ export default async function ContactPage() {
         {JSON.stringify(businessJsonLd)}
       </Script>
 
-      <SectionWrapper className="py-16">
-        <Container className="grid gap-7 xl:grid-cols-[minmax(0,1fr)_22rem]">
-          <section className="surface-panel p-6 sm:p-7">
-            <StatusBadge tone="premium">Contact BERIL</StatusBadge>
-            <h1 className="mt-4 text-5xl text-graphite sm:text-6xl">Get in Touch</h1>
+      <SectionWrapper className="section-rhythm-loose">
+        <Container className="grid gap-7 xl:grid-cols-[minmax(0,1fr)_23rem]">
+          <section className="surface-panel-strong p-6 sm:p-7">
+            <StatusBadge tone="premium">{messages.contact.badge}</StatusBadge>
+            <h1 className="mt-4 text-5xl text-graphite sm:text-6xl">{messages.contact.title}</h1>
             <p className="mt-3 text-sm text-graphite/76 sm:text-base">
-              Reach BERIL for product inquiries, service requests, and store support.
+              {messages.contact.subtitle}
             </p>
 
             <div className="mt-6">
@@ -60,17 +62,19 @@ export default async function ContactPage() {
             </div>
           </section>
 
-          <aside className="space-y-4">
+          <aside className="space-y-4 xl:pt-2">
             <article className="surface-panel p-5">
-              <h2 className="text-2xl text-graphite">Store Details</h2>
-              <p className="mt-3 text-sm text-graphite/76">{settings.storeAddress}</p>
-              <p className="mt-2 text-sm text-graphite/76">{settings.storeHours}</p>
-              <p className="mt-2 text-sm text-graphite/76">{settings.storePhone}</p>
-              <p className="mt-1 text-sm text-graphite/76">{settings.storeEmail}</p>
-              <p className="mt-1 text-sm text-graphite/76">{settings.storeWhatsapp}</p>
+              <p className="premium-eyebrow">{messages.contact.storeDetails}</p>
+              <div className="mt-3 space-y-3 text-sm text-graphite/76">
+                <p>{settings.storeAddress}</p>
+                <p>{settings.storeHours}</p>
+                <p>{settings.storePhone}</p>
+                <p>{settings.storeEmail}</p>
+                <p>{settings.storeWhatsapp}</p>
+              </div>
             </article>
             <article className="surface-panel p-5">
-              <h3 className="text-xl text-graphite">Quick Actions</h3>
+              <p className="premium-eyebrow">{messages.contact.quickActions}</p>
               <div className="mt-4">
                 <ContactQuickActions
                   phoneHref={phoneHref}
@@ -86,7 +90,7 @@ export default async function ContactPage() {
                 title="BERIL store location map"
                 src={`https://www.google.com/maps?q=${encodeURIComponent(settings.storeAddress)}&output=embed`}
                 loading="lazy"
-                className="h-60 w-full border-0"
+                className="h-64 w-full border-0"
                 referrerPolicy="no-referrer-when-downgrade"
               />
             </article>

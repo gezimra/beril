@@ -204,3 +204,142 @@ on conflict (slug) do update set
   content = excluded.content,
   status = excluded.status,
   published_at = excluded.published_at;
+
+insert into public.loyalty_rules (name, points_per_eur, min_redeem_points, reward_type, active)
+select 'BERIL Standard Loyalty', 1.0000, 100, 'points', true
+where not exists (
+  select 1 from public.loyalty_rules where name = 'BERIL Standard Loyalty'
+);
+
+insert into public.campaigns (name, slug, description, status, starts_at, ends_at, budget)
+values (
+  'Pranvere 2026',
+  'pranvere-2026',
+  'Oferta sezonale per ora dhe syze.',
+  'active',
+  timezone('utc', now()) - interval '3 day',
+  timezone('utc', now()) + interval '45 day',
+  1200
+)
+on conflict (slug) do update set
+  name = excluded.name,
+  description = excluded.description,
+  status = excluded.status,
+  starts_at = excluded.starts_at,
+  ends_at = excluded.ends_at,
+  budget = excluded.budget;
+
+insert into public.promotions (
+  campaign_id,
+  name,
+  status,
+  type,
+  scope,
+  percentage_off,
+  amount_off,
+  min_order_total,
+  is_stackable,
+  starts_at,
+  ends_at
+)
+select
+  c.id,
+  'Ulje 10% Checkout',
+  'active',
+  'percentage',
+  'order',
+  10,
+  null,
+  100,
+  false,
+  timezone('utc', now()) - interval '3 day',
+  timezone('utc', now()) + interval '45 day'
+from public.campaigns c
+where c.slug = 'pranvere-2026'
+  and not exists (
+    select 1 from public.promotions p where p.name = 'Ulje 10% Checkout'
+  );
+
+insert into public.coupon_codes (
+  promotion_id,
+  code,
+  status,
+  usage_limit,
+  per_customer_limit,
+  starts_at,
+  ends_at
+)
+select
+  p.id,
+  'BERIL10',
+  'active',
+  1000,
+  1,
+  timezone('utc', now()) - interval '3 day',
+  timezone('utc', now()) + interval '45 day'
+from public.promotions p
+where p.name = 'Ulje 10% Checkout'
+on conflict (code) do update set
+  promotion_id = excluded.promotion_id,
+  status = excluded.status,
+  usage_limit = excluded.usage_limit,
+  per_customer_limit = excluded.per_customer_limit,
+  starts_at = excluded.starts_at,
+  ends_at = excluded.ends_at;
+
+insert into public.notification_templates (key, title, channel, trigger, body, is_active)
+values
+  (
+    'order_created_email_sq',
+    'Order Created Email (SQ)',
+    'email',
+    'order_created',
+    'Pershendetje {{name}}, porosia juaj {{orderCode}} u pranua. Totali: {{total}} EUR.',
+    true
+  ),
+  (
+    'repair_created_email_sq',
+    'Repair Created Email (SQ)',
+    'email',
+    'repair_created',
+    'Pershendetje {{name}}, kerkesa e servisimit {{repairCode}} u regjistrua me sukses.',
+    true
+  )
+on conflict (key) do update set
+  title = excluded.title,
+  channel = excluded.channel,
+  trigger = excluded.trigger,
+  body = excluded.body,
+  is_active = excluded.is_active;
+
+insert into public.suppliers (name, contact_name, email, phone, notes)
+values
+  (
+    'Euro Time Parts',
+    'Arben K.',
+    'parts@eurotime.example',
+    '+38344000111',
+    'Supplier i pjeseve dhe baterive per ore.'
+  )
+on conflict (name) do update set
+  contact_name = excluded.contact_name,
+  email = excluded.email,
+  phone = excluded.phone,
+  notes = excluded.notes;
+
+insert into public.affiliates (name, email, code, status, commission_rate, notes)
+values
+  (
+    'Local Creator One',
+    'creator1@beril.example',
+    'BERIL-A1',
+    'active',
+    0.0500,
+    'Affiliate test account'
+  )
+on conflict (code) do update set
+  name = excluded.name,
+  email = excluded.email,
+  status = excluded.status,
+  commission_rate = excluded.commission_rate,
+  notes = excluded.notes;

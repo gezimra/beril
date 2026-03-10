@@ -1,0 +1,140 @@
+export const en = {
+  nav: {
+    home: "Home",
+    watches: "Watches",
+    eyewear: "Eyewear",
+    service: "Service",
+    trackRepair: "Track Repair",
+    about: "About",
+    contact: "Contact",
+    journal: "Journal",
+  },
+  header: {
+    descriptor: "Watches | Eyewear | Service",
+    signedIn: "Signed In",
+    searchAria: "Search products",
+    cartAria: "Open cart",
+    accountAria: "Open account",
+    chatAria: "Open WhatsApp chat",
+    serviceCta: "Book Service",
+  },
+  home: {
+    location: "Gjilan, Kosovo",
+    headline: "Precision in Time & Vision",
+    supportingLine:
+      "Curated products and practical service for everyday precision.",
+    pillarsLabel: "BERIL Pillars",
+    pillars: {
+      watches: {
+        title: "Watches",
+        body: "Curated models with precise movement and balanced styling.",
+      },
+      eyewear: {
+        title: "Eyewear",
+        body: "Refined frames and sunglasses chosen for fit and character.",
+      },
+      service: {
+        title: "Service",
+        body: "Trusted local diagnostics, repairs, and practical maintenance.",
+      },
+    },
+    featured: {
+      watchesEyebrow: "Featured Selection",
+      watchesTitle: "Featured Watches",
+      eyewearEyebrow: "Refined Frames",
+      eyewearTitle: "Featured Eyewear",
+      viewAll: "View All",
+      watchesSubline: "Mechanical and quartz models selected for daily precision.",
+      eyewearSubline: "Frames and sunglasses chosen for fit, comfort, and character.",
+    },
+    serviceStore: {
+      serviceBadge: "Watch and Eyewear Care",
+      serviceTitle: "Trusted service with practical turnaround",
+      serviceCta: "Explore Service",
+      storeBadge: "Store Visit",
+      storeTitle: "Visit BERIL in Gjilan",
+      storeMetaAddress: "Address",
+      storeMetaHours: "Hours",
+      storeMetaPhone: "Phone",
+    },
+    trust: {
+      badge: "Why Customers Trust BERIL",
+      intro: "Built on consistency, practical service, and local reliability.",
+      items: [
+        "Physical store in central Gjilan",
+        "Real watch and eyewear service",
+        "Curated model selection",
+        "Local delivery and in-store pickup",
+      ],
+    },
+  },
+  search: {
+    title: "Search",
+    inputPlaceholder: "Search watches, eyewear, or service...",
+    suggestedLabel: "Suggested Searches",
+    quickCategoriesLabel: "Quick Categories",
+    recentLabel: "Recent Searches",
+    helper:
+      "Search results are being refined. Use quick categories or suggested terms to continue browsing.",
+    suggested: ["Seiko", "Citizen", "Automatic", "Sunglasses", "Battery replacement"],
+  },
+  footer: {
+    navigate: "Navigate",
+    legal: "Legal",
+    aboutLine: "Curated watches, refined eyewear, and trusted service in Gjilan.",
+    rights: "All rights reserved.",
+  },
+  contact: {
+    badge: "Contact BERIL",
+    title: "Get in Touch",
+    subtitle:
+      "Reach BERIL for product inquiries, service requests, and store support.",
+    storeDetails: "Store Details",
+    quickActions: "Quick Actions",
+    form: {
+      name: "Name",
+      phone: "Phone",
+      email: "Email",
+      subject: "Subject",
+      message: "Message",
+      send: "Send Message",
+      sending: "Sending...",
+      success: "Message sent successfully. BERIL will follow up soon.",
+      errorFallback: "Unable to send message.",
+    },
+  },
+  about: {
+    badge: "About BERIL",
+    title: "Precision, trust, and practical care in one local boutique.",
+    subtitle:
+      "A local story of careful curation, practical service, and long-built trust.",
+    storyTitle: "Our Story",
+    whyTitle: "Why Watches + Eyewear + Service",
+    valuesTitle: "Values and Approach",
+    whyBody:
+      "BERIL serves customers who value both product quality and long-term care. We curate what we sell and stand behind it with practical service support.",
+  },
+  repairTrack: {
+    badge: "Track Repair",
+    title: "Repair Status",
+    subtitle:
+      "Enter your repair code and phone or email to view the current repair timeline.",
+    codeLabel: "Repair code",
+    codePlaceholder: "BRL-R-2026-00001",
+    lookupLabel: "Phone or email",
+    lookupPlaceholder: "+383...",
+    submit: "Track",
+    submitting: "Searching...",
+    howItWorksTitle: "How Tracking Works",
+    howItWorksIntro:
+      "Updates appear as soon as BERIL staff changes your repair status.",
+    howItWorksItems: [
+      "Use the repair code from your request confirmation.",
+      "Verify with the same phone or email used in your request.",
+      "Timeline updates appear once status changes are saved by BERIL.",
+    ],
+    timelineTitle: "Timeline",
+    amountDue: "Amount due",
+    pendingAmount: "To be confirmed",
+  },
+} as const;

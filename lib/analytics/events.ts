@@ -1,9 +1,13 @@
 export const analyticsEventNames = [
   "add_to_cart",
+  "apply_coupon",
   "begin_checkout",
+  "payment_initiated",
   "place_order",
   "repair_request_submit",
   "repair_track_search",
+  "start_chat",
+  "affiliate_click",
   "click_whatsapp",
   "click_call",
   "map_click",
@@ -25,9 +29,19 @@ export interface AnalyticsEventPayloads {
     quantity: number;
     unitPrice: number;
   };
+  apply_coupon: BaseEventPayload & {
+    couponCode: string;
+    discountAmount: number;
+  };
   begin_checkout: BaseEventPayload & {
     itemCount: number;
     subtotal: number;
+  };
+  payment_initiated: BaseEventPayload & {
+    orderCode: string;
+    paymentMethod: string;
+    amount: number;
+    transactionId?: string;
   };
   place_order: BaseEventPayload & {
     orderCode: string;
@@ -43,6 +57,14 @@ export interface AnalyticsEventPayloads {
   repair_track_search: BaseEventPayload & {
     repairCode?: string;
     result: "found" | "not_found";
+  };
+  start_chat: BaseEventPayload & {
+    threadId?: string;
+    channel?: string;
+  };
+  affiliate_click: BaseEventPayload & {
+    code: string;
+    affiliateId?: string;
   };
   click_whatsapp: BaseEventPayload & {
     destination?: string;

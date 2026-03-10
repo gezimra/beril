@@ -26,6 +26,9 @@ export default async function OrderSuccessPage({
   const orderCode = getParam(query.orderCode, "Pending Confirmation");
   const subtotal = Number(getParam(query.subtotal, "0"));
   const deliveryFee = Number(getParam(query.deliveryFee, "0"));
+  const discountAmount = Number(getParam(query.discountAmount, "0"));
+  const couponCode = getParam(query.couponCode, "");
+  const paymentStatus = getParam(query.paymentStatus, "pending");
   const total = Number(getParam(query.total, "0"));
 
   return (
@@ -38,7 +41,13 @@ export default async function OrderSuccessPage({
           </h1>
           <p className="mt-4 text-sm text-graphite/76 sm:text-base">
             Your order has been received. We will confirm availability and delivery
-            by phone or email. Payment will be completed on delivery or on pickup.
+            by phone or email.
+          </p>
+          <p className="mt-2 text-sm text-graphite/72">
+            Payment status: <span className="font-medium">{paymentStatus}</span>
+            {paymentStatus === "authorized"
+              ? " (online card transaction initialized in test mode)."
+              : " (completed on delivery or pickup)."}
           </p>
 
           <div className="mt-7 rounded-xl border border-graphite/12 bg-white/78 p-5">
@@ -56,6 +65,12 @@ export default async function OrderSuccessPage({
             <div className="flex items-center justify-between">
               <dt className="text-graphite/72">Delivery fee</dt>
               <dd>{formatEur(deliveryFee)}</dd>
+            </div>
+            <div className="flex items-center justify-between">
+              <dt className="text-graphite/72">
+                Discount {couponCode ? `(${couponCode})` : ""}
+              </dt>
+              <dd className="text-mineral">-{formatEur(discountAmount)}</dd>
             </div>
             <div className="flex items-center justify-between text-base font-medium">
               <dt>Total</dt>

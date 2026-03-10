@@ -7,6 +7,10 @@
   --color-mineral: #2f4b44;
   --color-gold: #c39b62;
   --color-graphite: #2c2c2c;
+  --radius-card: 1.15rem;
+  --radius-card-inner: 0.95rem;
+  --shadow-card: 0 20px 55px -36px rgba(47, 75, 68, 0.52);
+  --shadow-card-strong: 0 28px 66px -38px rgba(47, 75, 68, 0.65);
 }
 
 @theme inline {
@@ -74,6 +78,74 @@ a {
 
 @layer utilities {
   .surface-panel {
-    @apply rounded-2xl border border-graphite/10 bg-white/75 shadow-[0_20px_55px_-36px_rgba(47,75,68,0.58)] backdrop-blur-sm;
+    @apply border border-graphite/10 bg-white/76 backdrop-blur-sm;
+    border-radius: var(--radius-card);
+    box-shadow: var(--shadow-card);
+  }
+
+  .surface-panel-strong {
+    @apply border border-graphite/12 bg-white/82 backdrop-blur-sm;
+    border-radius: var(--radius-card);
+    box-shadow: var(--shadow-card-strong);
+  }
+
+  .section-rhythm-tight {
+    @apply py-10 sm:py-14;
+  }
+
+  .section-rhythm {
+    @apply py-14 sm:py-20;
+  }
+
+  .section-rhythm-loose {
+    @apply py-16 sm:py-24;
+  }
+
+  .premium-eyebrow {
+    @apply text-xs uppercase tracking-[0.2em] text-graphite/58;
+  }
+
+  .premium-muted {
+    @apply text-sm text-graphite/72;
+  }
+
+  .label-muted {
+    @apply text-xs uppercase tracking-[0.14em] text-graphite/62;
+  }
+
+  .section-intro-line {
+    @apply max-w-2xl text-sm text-graphite/72;
+  }
+
+  .input-premium {
+    @apply h-11 w-full rounded-xl border border-graphite/16 bg-white/86 px-3 text-sm text-graphite transition focus:border-gold focus:bg-white focus:outline-none;
+  }
+
+  .textarea-premium {
+    @apply w-full rounded-xl border border-graphite/16 bg-white/86 px-3 py-2 text-sm text-graphite transition focus:border-gold focus:bg-white focus:outline-none;
+  }
+
+  .icon-button {
+    @apply inline-flex h-[34px] w-[34px] items-center justify-center rounded-full border border-graphite/10 bg-white/72 text-graphite transition hover:border-graphite/16 hover:bg-white;
+  }
+
+  .nav-pill {
+    @apply rounded-full border border-transparent px-2.5 py-1.5 text-[0.68rem] uppercase tracking-[0.14em] text-graphite/82 transition hover:border-graphite/12 hover:bg-white/75 hover:text-graphite 2xl:px-3 2xl:text-xs;
+  }
+
+  .nav-pill-active {
+    @apply border-graphite/18 bg-white/88 text-walnut;
+  }
+
+  .badge-soft {
+    @apply inline-flex h-7 items-center rounded-full border px-3 text-[0.64rem] font-medium uppercase tracking-[0.14em];
+  }
+
+  .badge-request {
+    @apply border-gold/45 bg-gold/16 text-graphite/78;
+  }
+
+  .trust-row {
+    @apply flex items-start gap-3 rounded-xl border border-graphite/10 bg-white/82 px-4 py-3.5 text-sm text-graphite/80;
   }
 }

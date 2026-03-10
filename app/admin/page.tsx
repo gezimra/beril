@@ -111,6 +111,27 @@ export default async function AdminHomePage() {
           </ul>
         </article>
       </section>
+
+      <section className="surface-panel p-5">
+        <h2 className="text-2xl text-graphite">Extended Operations</h2>
+        <div className="mt-3 grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
+          {[
+            { label: "Marketing", href: "/admin/marketing" },
+            { label: "Payments", href: "/admin/payments" },
+            { label: "Support", href: "/admin/support" },
+            { label: "Operations", href: "/admin/operations" },
+            { label: "Growth", href: "/admin/growth" },
+          ].map((item) => (
+            <Link
+              key={item.href}
+              href={item.href}
+              className="rounded-xl border border-graphite/12 bg-white/75 px-4 py-3 text-sm font-medium text-graphite transition hover:bg-white"
+            >
+              {item.label}
+            </Link>
+          ))}
+        </div>
+      </section>
     </Container>
   );
 }

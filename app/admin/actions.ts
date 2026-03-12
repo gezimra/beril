@@ -5,14 +5,20 @@ import { z } from "zod";
 
 import {
   addAdminRepairAttachment,
+  deleteAdminHeroSlide,
   updateAdminOrderInternalNotes,
+  updateAdminOrderPaymentStatus,
   updateAdminOrderStatus,
   updateAdminRepairEstimate,
   updateAdminRepairNotes,
   updateAdminRepairStatus,
   updateAdminSiteSetting,
+  uploadAdminHeroSlideImage,
+  uploadAdminProductGalleryImage,
   uploadAdminProductPrimaryImage,
   uploadAdminJournalCoverImage,
+  uploadAdminSiteImage,
+  upsertAdminHeroSlide,
   upsertAdminJournalPost,
   upsertAdminProduct,
 } from "@/lib/db/admin";
@@ -24,9 +30,19 @@ import {
   upsertAdminNotificationTemplate,
 } from "@/lib/db/crm-support";
 import {
+  createManualAdminOrder,
+  createManualAdminRepairRequest,
+  createAdminCashbookEntry,
+  createAdminRepairPartUsage,
   createStockMovement,
+  upsertAdminInventoryCompatibility,
+  upsertAdminInventoryItem,
   upsertAdminPurchaseOrder,
   upsertAdminSupplier,
+  upsertAdminWatchBrand,
+  upsertAdminWatchCaliber,
+  upsertAdminWatchModel,
+  upsertAdminWatchReference,
   upsertAdminWorkOrder,
 } from "@/lib/db/inventory-ops";
 import {
@@ -44,16 +60,24 @@ import {
 import {
   affiliateStatuses,
   automationTriggers,
+  cashEntryTypes,
   campaignStatuses,
   couponStatuses,
+  deliveryMethods,
+  heroSlideStatuses,
+  heroSlideTypes,
+  inventoryItemTypes,
   journalStatuses,
   notificationChannels,
   orderStatuses,
   paymentTransactionStatuses,
   payoutStatuses,
+  paymentMethods,
+  paymentStatuses,
   promotionScopes,
   promotionStatuses,
   promotionTypes,
+  preferredContactMethods,
   purchaseOrderStatuses,
   repairStatuses,
   rewardTypes,
@@ -64,11 +88,43 @@ import {
   supportThreadStatuses,
   workOrderStatuses,
 } from "@/types/domain";
+import { optionalPhoneInputSchema, phoneInputSchema } from "@/lib/validations/phone";
+
+const adminOperationsPaths = [
+  "/admin/operations",
+  "/admin/operations/front-desk",
+  "/admin/operations/inventory",
+  "/admin/operations/workshop",
+  "/admin/operations/watch-db",
+  "/admin/operations/cashbook",
+] as const;
+
+function revalidateOperationsModules() {
+  for (const path of adminOperationsPaths) {
+    revalidatePath(path);
+  }
+}
+
+function getAdminReturnPath(formData: FormData, fallback: string) {
+  const value = formData.get("returnTo");
+  if (typeof value !== "string") {
+    return fallback;
+  }
+  if (!value.startsWith("/admin/")) {
+    return fallback;
+  }
+  return value;
+}
 
 const updateOrderStatusSchema = z.object({
   orderId: z.string().min(1),
   status: z.enum(orderStatuses),
   note: z.string().trim().optional(),
+});
+
+const updateOrderPaymentStatusSchema = z.object({
+  orderId: z.string().min(1),
+  paymentStatus: z.enum(paymentStatuses),
 });
 
 const updateOrderNotesSchema = z.object({
@@ -145,6 +201,15 @@ const uploadJournalCoverSchema = z.object({
 const uploadProductPrimaryImageSchema = z.object({
   productId: z.string().min(1),
   imageAlt: z.string().trim().min(2).optional(),
+});
+
+const uploadProductGalleryImageSchema = z.object({
+  productId: z.string().min(1),
+  imageAlt: z.string().trim().min(2).optional(),
+});
+
+const uploadSiteImageSchema = z.object({
+  settingKey: z.string().min(1),
 });
 
 const upsertCampaignSchema = z.object({
@@ -226,7 +291,7 @@ const createSupportThreadSchema = z.object({
   channel: z.enum(supportChannels).default("web_chat"),
   customerName: z.string().trim().optional(),
   customerEmail: z.string().trim().email().optional().or(z.literal("")),
-  customerPhone: z.string().trim().optional(),
+  customerPhone: optionalPhoneInputSchema,
 });
 
 const createSupportMessageSchema = z.object({
@@ -235,7 +300,7 @@ const createSupportMessageSchema = z.object({
   message: z.string().trim().min(1),
   senderName: z.string().trim().optional(),
   senderEmail: z.string().trim().email().optional().or(z.literal("")),
-  senderPhone: z.string().trim().optional(),
+  senderPhone: optionalPhoneInputSchema,
 });
 
 const updateSupportThreadStatusSchema = z.object({
@@ -267,7 +332,7 @@ const upsertSupplierSchema = z.object({
   name: z.string().trim().min(2),
   contactName: z.string().trim().optional(),
   email: z.string().trim().email().optional().or(z.literal("")),
-  phone: z.string().trim().optional(),
+  phone: optionalPhoneInputSchema,
   notes: z.string().trim().optional(),
 });
 
@@ -291,6 +356,7 @@ const upsertPurchaseOrderSchema = z.object({
 
 const createStockMovementSchema = z.object({
   productId: z.string().trim().optional(),
+  inventoryItemId: z.string().trim().optional(),
   movementType: z.enum(stockMovementTypes),
   quantityDelta: z.coerce.number().int(),
   unitCost: z.preprocess(
@@ -299,6 +365,229 @@ const createStockMovementSchema = z.object({
   ),
   referenceType: z.string().trim().optional(),
   referenceId: z.string().trim().optional(),
+  note: z.string().trim().optional(),
+});
+
+const upsertInventoryItemSchema = z.object({
+  id: z.string().optional(),
+  sku: z.string().trim().min(2),
+  name: z.string().trim().min(2),
+  itemType: z.enum(inventoryItemTypes),
+  brand: z.string().trim().optional(),
+  model: z.string().trim().optional(),
+  caliber: z.string().trim().optional(),
+  quantityOnHand: z.preprocess(
+    (value) => (value === "" || value === null ? undefined : value),
+    z.coerce.number().int().nonnegative().optional(),
+  ),
+  reorderLevel: z.preprocess(
+    (value) => (value === "" || value === null ? undefined : value),
+    z.coerce.number().int().nonnegative().optional(),
+  ),
+  unitCost: z.preprocess(
+    (value) => (value === "" || value === null ? undefined : value),
+    z.coerce.number().nonnegative().optional(),
+  ),
+  unitPrice: z.preprocess(
+    (value) => (value === "" || value === null ? undefined : value),
+    z.coerce.number().nonnegative().optional(),
+  ),
+  location: z.string().trim().optional(),
+  notes: z.string().trim().optional(),
+  active: z.enum(["true", "false"]).default("true"),
+});
+
+const createCashbookEntrySchema = z.object({
+  entryDate: z.string().trim().optional(),
+  entryType: z.enum(cashEntryTypes),
+  amount: z.coerce.number().positive(),
+  category: z.string().trim().optional(),
+  paymentMethod: z.enum(["cash_on_delivery", "pay_in_store", "card_online", "bank_transfer"]).optional(),
+  note: z.string().trim().optional(),
+  referenceType: z.string().trim().optional(),
+  referenceId: z.string().trim().optional(),
+});
+
+const createManualOrderItemSchema = z.object({
+  productId: z.string().trim().min(1),
+  quantity: z.preprocess(
+    (value) => (value === "" || value === null ? undefined : value),
+    z.coerce.number().int().positive().optional(),
+  ),
+  sellingPrice: z.preprocess(
+    (value) => (value === "" || value === null ? undefined : value),
+    z.coerce.number().nonnegative().optional(),
+  ),
+  rabat: z.preprocess(
+    (value) => (value === "" || value === null ? undefined : value),
+    z.coerce.number().nonnegative().optional(),
+  ),
+  rabatType: z.preprocess(
+    (value) => (value === "" || value === null ? undefined : value),
+    z.enum(["amount", "percent"]).optional(),
+  ),
+});
+
+const createManualOrderSchema = z.object({
+  customerName: z.string().trim().min(2),
+  phone: phoneInputSchema,
+  email: z.string().trim().email().optional().or(z.literal("")),
+  country: z.string().trim().min(2).optional(),
+  city: z.string().trim().min(2),
+  address: z.string().trim().min(2),
+  items: z.array(createManualOrderItemSchema).min(1),
+  deliveryMethod: z.enum(deliveryMethods).optional(),
+  paymentMethod: z.enum(paymentMethods).optional(),
+  paymentStatus: z.enum(paymentStatuses).optional(),
+  orderStatus: z.enum(orderStatuses).optional(),
+  subtotal: z.preprocess(
+    (value) => (value === "" || value === null ? undefined : value),
+    z.coerce.number().nonnegative().optional(),
+  ),
+  deliveryFee: z.preprocess(
+    (value) => (value === "" || value === null ? undefined : value),
+    z.coerce.number().nonnegative().optional(),
+  ),
+  total: z.preprocess(
+    (value) => (value === "" || value === null ? undefined : value),
+    z.coerce.number().nonnegative().optional(),
+  ),
+  notes: z.string().trim().optional(),
+  internalNotes: z.string().trim().optional(),
+});
+
+const createManualRepairRequestItemSchema = z.object({
+  itemType: z.enum(["watch", "eyewear", "other"]),
+  brand: z.string().trim().min(1),
+  model: z.string().trim().min(1),
+  serviceType: z.string().trim().min(2),
+  description: z.string().trim().min(6),
+});
+
+const createManualRepairRequestSharedSchema = z.object({
+  customerName: z.string().trim().min(2),
+  phone: phoneInputSchema,
+  email: z.string().trim().email().optional().or(z.literal("")),
+  preferredContactMethod: z.enum(preferredContactMethods).optional(),
+  dropOffMethod: z
+    .enum(["bring_to_store", "already_dropped_off", "contact_me_first"])
+    .optional(),
+  status: z.enum(repairStatuses).optional(),
+  estimatedCompletion: z.string().trim().optional(),
+  amountDue: z.preprocess(
+    (value) => (value === "" || value === null ? undefined : value),
+    z.coerce.number().nonnegative().optional(),
+  ),
+  notesInternal: z.string().trim().optional(),
+  notesCustomer: z.string().trim().optional(),
+});
+
+const upsertWatchBrandSchema = z.object({
+  id: z.string().optional(),
+  name: z.string().trim().min(2),
+  country: z.string().trim().optional(),
+  website: z.string().trim().url().optional().or(z.literal("")),
+  notes: z.string().trim().optional(),
+});
+
+const upsertWatchCaliberSchema = z.object({
+  id: z.string().optional(),
+  brandId: z.string().trim().optional(),
+  caliberName: z.string().trim().min(1),
+  movementType: z.string().trim().min(1),
+  powerReserveHours: z.preprocess(
+    (value) => (value === "" || value === null ? undefined : value),
+    z.coerce.number().nonnegative().optional(),
+  ),
+  frequencyBph: z.preprocess(
+    (value) => (value === "" || value === null ? undefined : value),
+    z.coerce.number().int().nonnegative().optional(),
+  ),
+  jewels: z.preprocess(
+    (value) => (value === "" || value === null ? undefined : value),
+    z.coerce.number().int().nonnegative().optional(),
+  ),
+  diameterMm: z.preprocess(
+    (value) => (value === "" || value === null ? undefined : value),
+    z.coerce.number().nonnegative().optional(),
+  ),
+  heightMm: z.preprocess(
+    (value) => (value === "" || value === null ? undefined : value),
+    z.coerce.number().nonnegative().optional(),
+  ),
+  hasHacking: z.enum(["true", "false"]).default("false"),
+  hasHandWinding: z.enum(["true", "false"]).default("false"),
+  notes: z.string().trim().optional(),
+});
+
+const upsertWatchModelSchema = z.object({
+  id: z.string().optional(),
+  brandId: z.string().trim().optional(),
+  modelName: z.string().trim().min(1),
+  collection: z.string().trim().optional(),
+  targetGender: z.string().trim().optional(),
+  notes: z.string().trim().optional(),
+});
+
+const upsertWatchReferenceSchema = z.object({
+  id: z.string().optional(),
+  modelId: z.string().trim().min(1),
+  referenceCode: z.string().trim().min(1),
+  caliberId: z.string().trim().optional(),
+  caseSizeMm: z.preprocess(
+    (value) => (value === "" || value === null ? undefined : value),
+    z.coerce.number().nonnegative().optional(),
+  ),
+  lugWidthMm: z.preprocess(
+    (value) => (value === "" || value === null ? undefined : value),
+    z.coerce.number().nonnegative().optional(),
+  ),
+  waterResistanceM: z.preprocess(
+    (value) => (value === "" || value === null ? undefined : value),
+    z.coerce.number().int().nonnegative().optional(),
+  ),
+  crystal: z.string().trim().optional(),
+  caseMaterial: z.string().trim().optional(),
+  dialColor: z.string().trim().optional(),
+  strapType: z.string().trim().optional(),
+  productionFromYear: z.preprocess(
+    (value) => (value === "" || value === null ? undefined : value),
+    z.coerce.number().int().min(1900).max(2200).optional(),
+  ),
+  productionToYear: z.preprocess(
+    (value) => (value === "" || value === null ? undefined : value),
+    z.coerce.number().int().min(1900).max(2200).optional(),
+  ),
+  notes: z.string().trim().optional(),
+});
+
+const upsertInventoryCompatibilitySchema = z
+  .object({
+    id: z.string().optional(),
+    inventoryItemId: z.string().trim().min(1),
+    caliberId: z.string().trim().optional(),
+    modelId: z.string().trim().optional(),
+    referenceId: z.string().trim().optional(),
+    notes: z.string().trim().optional(),
+  })
+  .superRefine((data, ctx) => {
+    if (!data.caliberId && !data.modelId && !data.referenceId) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["referenceId"],
+        message: "Select at least one compatibility target.",
+      });
+    }
+  });
+
+const createRepairPartUsageSchema = z.object({
+  workOrderId: z.string().trim().min(1),
+  inventoryItemId: z.string().trim().min(1),
+  quantity: z.coerce.number().int().positive(),
+  unitCost: z.preprocess(
+    (value) => (value === "" || value === null ? undefined : value),
+    z.coerce.number().nonnegative().optional(),
+  ),
   note: z.string().trim().optional(),
 });
 
@@ -413,6 +702,51 @@ function parseJsonObject(raw?: string) {
   }
 }
 
+function parseLegacyStringArray(raw?: string) {
+  if (!raw) {
+    return [] as string[];
+  }
+
+  const trimmed = raw.trim();
+  if (!trimmed) {
+    return [] as string[];
+  }
+
+  try {
+    const parsed = JSON.parse(trimmed);
+    if (Array.isArray(parsed)) {
+      return parsed
+        .map((entry) => String(entry).trim())
+        .filter(Boolean);
+    }
+  } catch {
+    // fallback to newline parsing
+  }
+
+  return trimmed
+    .split("\n")
+    .map((entry) => entry.trim())
+    .filter(Boolean);
+}
+
+function getStringArraySetting(
+  formData: FormData,
+  listFieldName: string,
+  legacyFieldName: string,
+) {
+  const listValues = formData
+    .getAll(listFieldName)
+    .map((entry) => String(entry).trim())
+    .filter(Boolean);
+
+  if (listValues.length > 0) {
+    return JSON.stringify(listValues.slice(0, 24));
+  }
+
+  const legacyRaw = String(formData.get(legacyFieldName) ?? "");
+  return JSON.stringify(parseLegacyStringArray(legacyRaw).slice(0, 24));
+}
+
 export async function updateOrderStatusAction(formData: FormData) {
   const payload = updateOrderStatusSchema.parse({
     orderId: formData.get("orderId"),
@@ -423,6 +757,19 @@ export async function updateOrderStatusAction(formData: FormData) {
   await updateAdminOrderStatus(payload.orderId, payload.status, payload.note ?? null);
   revalidatePath("/admin");
   revalidatePath("/admin/orders");
+  revalidatePath("/admin/operations/cashbook");
+}
+
+export async function updateOrderPaymentStatusAction(formData: FormData) {
+  const payload = updateOrderPaymentStatusSchema.parse({
+    orderId: formData.get("orderId"),
+    paymentStatus: formData.get("paymentStatus"),
+  });
+
+  await updateAdminOrderPaymentStatus(payload.orderId, payload.paymentStatus);
+  revalidatePath("/admin");
+  revalidatePath("/admin/orders");
+  revalidatePath("/admin/operations/cashbook");
 }
 
 export async function updateOrderNotesAction(formData: FormData) {
@@ -526,7 +873,7 @@ export async function upsertProductAction(formData: FormData) {
 }
 
 export async function saveSiteSettingsAction(formData: FormData) {
-  const keys = [
+  const scalarKeys = [
     "business.name",
     "hero.headline",
     "hero.subheadline",
@@ -542,19 +889,33 @@ export async function saveSiteSettingsAction(formData: FormData) {
     "store.map_url",
     "about.intro",
     "about.story",
-    "about.values",
     "seo.default_title",
     "seo.default_description",
     "seo.default_image",
     "commerce.delivery_fee_home",
-    "home.trust_points",
-    "home.service_highlights",
   ] as const;
 
-  for (const key of keys) {
+  for (const key of scalarKeys) {
     const value = String(formData.get(key) ?? "");
     await updateAdminSiteSetting(key, value);
   }
+
+  await updateAdminSiteSetting(
+    "about.values",
+    getStringArraySetting(formData, "about.values[]", "about.values"),
+  );
+  await updateAdminSiteSetting(
+    "home.trust_points",
+    getStringArraySetting(formData, "home.trust_points[]", "home.trust_points"),
+  );
+  await updateAdminSiteSetting(
+    "home.service_highlights",
+    getStringArraySetting(
+      formData,
+      "home.service_highlights[]",
+      "home.service_highlights",
+    ),
+  );
 
   revalidatePath("/");
   revalidatePath("/about");
@@ -659,6 +1020,65 @@ export async function uploadProductPrimaryImageAction(formData: FormData) {
   revalidatePath("/products/[slug]", "page");
 }
 
+export async function uploadProductGalleryImageAction(formData: FormData) {
+  const payload = uploadProductGalleryImageSchema.parse({
+    productId: formData.get("productId"),
+    imageAlt: formData.get("imageAlt") || undefined,
+  });
+
+  const file = formData.get("galleryImageFile");
+  if (!(file instanceof File) || file.size === 0 || file.size > maxUploadSizeBytes) {
+    return;
+  }
+
+  if (!file.type.startsWith("image/")) {
+    return;
+  }
+
+  const fileBytes = new Uint8Array(await file.arrayBuffer());
+  await uploadAdminProductGalleryImage({
+    productId: payload.productId,
+    imageAlt: payload.imageAlt ?? null,
+    fileName: file.name,
+    fileType: file.type,
+    fileBytes,
+  });
+
+  revalidatePath("/admin");
+  revalidatePath("/admin/products");
+  revalidatePath("/");
+  revalidatePath("/watches");
+  revalidatePath("/eyewear");
+  revalidatePath("/products/[slug]", "page");
+}
+
+export async function uploadSiteImageAction(formData: FormData) {
+  const payload = uploadSiteImageSchema.parse({
+    settingKey: formData.get("settingKey"),
+  });
+
+  const file = formData.get("siteImageFile");
+  if (!(file instanceof File) || file.size === 0 || file.size > maxUploadSizeBytes) {
+    return;
+  }
+
+  if (!file.type.startsWith("image/")) {
+    return;
+  }
+
+  const fileBytes = new Uint8Array(await file.arrayBuffer());
+  await uploadAdminSiteImage({
+    settingKey: payload.settingKey,
+    fileName: file.name,
+    fileType: file.type,
+    fileBytes,
+  });
+
+  revalidatePath("/");
+  revalidatePath("/admin/settings");
+  revalidatePath("/admin/content");
+}
+
 export async function upsertCampaignAction(formData: FormData) {
   const payload = upsertCampaignSchema.parse({
     id: formData.get("id") || undefined,
@@ -749,8 +1169,10 @@ export async function updatePaymentTransactionStatusAction(formData: FormData) {
     payload.status,
     payload.note ?? null,
   );
+  revalidatePath("/admin");
   revalidatePath("/admin/payments");
   revalidatePath("/admin/orders");
+  revalidatePath("/admin/operations/cashbook");
 }
 
 export async function createSupportThreadAction(formData: FormData) {
@@ -847,6 +1269,7 @@ export async function queueNotificationJobAction(formData: FormData) {
 }
 
 export async function upsertSupplierAction(formData: FormData) {
+  const returnTo = getAdminReturnPath(formData, "/admin/operations/inventory");
   const payload = upsertSupplierSchema.parse({
     id: formData.get("id") || undefined,
     name: formData.get("name"),
@@ -860,10 +1283,12 @@ export async function upsertSupplierAction(formData: FormData) {
     ...payload,
     email: payload.email || null,
   });
-  revalidatePath("/admin/operations");
+  revalidatePath(returnTo);
+  revalidateOperationsModules();
 }
 
 export async function upsertPurchaseOrderAction(formData: FormData) {
+  const returnTo = getAdminReturnPath(formData, "/admin/operations/inventory");
   const payload = upsertPurchaseOrderSchema.parse({
     id: formData.get("id") || undefined,
     poNumber: formData.get("poNumber"),
@@ -880,12 +1305,15 @@ export async function upsertPurchaseOrderAction(formData: FormData) {
     ...payload,
     supplierId: payload.supplierId || null,
   });
-  revalidatePath("/admin/operations");
+  revalidatePath(returnTo);
+  revalidateOperationsModules();
 }
 
 export async function createStockMovementAction(formData: FormData) {
+  const returnTo = getAdminReturnPath(formData, "/admin/operations/inventory");
   const payload = createStockMovementSchema.parse({
     productId: formData.get("productId") || undefined,
+    inventoryItemId: formData.get("inventoryItemId") || undefined,
     movementType: formData.get("movementType"),
     quantityDelta: formData.get("quantityDelta"),
     unitCost: formData.get("unitCost"),
@@ -897,12 +1325,346 @@ export async function createStockMovementAction(formData: FormData) {
   await createStockMovement({
     ...payload,
     productId: payload.productId || null,
+    inventoryItemId: payload.inventoryItemId || null,
   });
-  revalidatePath("/admin/operations");
+  revalidatePath(returnTo);
+  revalidateOperationsModules();
   revalidatePath("/admin/products");
 }
 
+export async function upsertInventoryItemAction(formData: FormData) {
+  const returnTo = getAdminReturnPath(formData, "/admin/operations/inventory");
+  const payload = upsertInventoryItemSchema.parse({
+    id: formData.get("id") || undefined,
+    sku: formData.get("sku"),
+    name: formData.get("name"),
+    itemType: formData.get("itemType"),
+    brand: formData.get("brand") || undefined,
+    model: formData.get("model") || undefined,
+    caliber: formData.get("caliber") || undefined,
+    quantityOnHand: formData.get("quantityOnHand"),
+    reorderLevel: formData.get("reorderLevel"),
+    unitCost: formData.get("unitCost"),
+    unitPrice: formData.get("unitPrice"),
+    location: formData.get("location") || undefined,
+    notes: formData.get("notes") || undefined,
+    active: formData.get("active") ? "true" : "false",
+  });
+
+  await upsertAdminInventoryItem({
+    ...payload,
+    active: payload.active === "true",
+  });
+  revalidatePath(returnTo);
+  revalidateOperationsModules();
+}
+
+export async function createCashbookEntryAction(formData: FormData) {
+  const returnTo = getAdminReturnPath(formData, "/admin/operations/cashbook");
+  const payload = createCashbookEntrySchema.parse({
+    entryDate: formData.get("entryDate") || undefined,
+    entryType: formData.get("entryType"),
+    amount: formData.get("amount"),
+    category: formData.get("category") || undefined,
+    paymentMethod: formData.get("paymentMethod") || undefined,
+    note: formData.get("note") || undefined,
+    referenceType: formData.get("referenceType") || undefined,
+    referenceId: formData.get("referenceId") || undefined,
+  });
+
+  await createAdminCashbookEntry(payload);
+  revalidatePath(returnTo);
+  revalidateOperationsModules();
+}
+
+export async function createManualOrderAction(formData: FormData) {
+  const returnTo = getAdminReturnPath(formData, "/admin/operations/front-desk");
+  const itemProductIds = formData
+    .getAll("itemProductId")
+    .map((value) => (typeof value === "string" ? value.trim() : ""));
+  const itemQuantities = formData
+    .getAll("itemQuantity")
+    .map((value) => (typeof value === "string" ? value : ""));
+  const itemSellingPrices = formData
+    .getAll("itemSellingPrice")
+    .map((value) => (typeof value === "string" ? value : ""));
+  const itemRabats = formData
+    .getAll("itemRabat")
+    .map((value) => (typeof value === "string" ? value : ""));
+  const itemRabatTypes = formData
+    .getAll("itemRabatType")
+    .map((value) => (typeof value === "string" ? value : ""));
+
+  const items = itemProductIds.map((productId, index) => ({
+    productId,
+    quantity: itemQuantities[index] || undefined,
+    sellingPrice: itemSellingPrices[index] || undefined,
+    rabat: itemRabats[index] || undefined,
+    rabatType: itemRabatTypes[index] || undefined,
+  })).filter((item) => item.productId.length > 0);
+
+  const payload = createManualOrderSchema.parse({
+    customerName: formData.get("customerName"),
+    phone: formData.get("phone"),
+    email: formData.get("email") || undefined,
+    country: formData.get("country") || undefined,
+    city: formData.get("city"),
+    address: formData.get("address"),
+    items,
+    deliveryMethod: formData.get("deliveryMethod"),
+    paymentMethod: formData.get("paymentMethod"),
+    paymentStatus: formData.get("paymentStatus") || undefined,
+    orderStatus: formData.get("orderStatus") || undefined,
+    subtotal: formData.get("subtotal"),
+    deliveryFee: formData.get("deliveryFee"),
+    total: formData.get("total"),
+    notes: formData.get("notes") || undefined,
+    internalNotes: formData.get("internalNotes") || undefined,
+  });
+
+  await createManualAdminOrder({
+    ...payload,
+    email: payload.email || null,
+    country: payload.country || "Kosovo",
+    deliveryMethod: payload.deliveryMethod ?? "home_delivery",
+    paymentMethod: payload.paymentMethod ?? "cash_on_delivery",
+    paymentStatus: payload.paymentStatus ?? "pending",
+    orderStatus: payload.orderStatus ?? "pending",
+  });
+  revalidatePath(returnTo);
+  revalidateOperationsModules();
+  revalidatePath("/admin/orders");
+}
+
+export async function createManualRepairRequestAction(formData: FormData) {
+  const returnTo = getAdminReturnPath(formData, "/admin/operations/front-desk");
+  const sharedPayload = createManualRepairRequestSharedSchema.parse({
+    customerName: formData.get("customerName"),
+    phone: formData.get("phone"),
+    email: formData.get("email") || undefined,
+    preferredContactMethod: formData.get("preferredContactMethod"),
+    dropOffMethod: formData.get("dropOffMethod"),
+    status: formData.get("status") || undefined,
+    estimatedCompletion: formData.get("estimatedCompletion") || undefined,
+    amountDue: formData.get("amountDue"),
+    notesInternal: formData.get("notesInternal") || undefined,
+    notesCustomer: formData.get("notesCustomer") || undefined,
+  });
+
+  const itemTypes = formData
+    .getAll("serviceItemType")
+    .map((value) => (typeof value === "string" ? value : ""));
+  const brands = formData
+    .getAll("serviceItemBrand")
+    .map((value) => (typeof value === "string" ? value : ""));
+  const models = formData
+    .getAll("serviceItemModel")
+    .map((value) => (typeof value === "string" ? value : ""));
+  const serviceTypes = formData
+    .getAll("serviceItemServiceType")
+    .map((value) => (typeof value === "string" ? value : ""));
+  const descriptions = formData
+    .getAll("serviceItemDescription")
+    .map((value) => (typeof value === "string" ? value : ""));
+
+  const itemPayloadRaw =
+    itemTypes.length > 0
+      ? itemTypes.map((itemType, index) => ({
+          itemType,
+          brand: brands[index] || "",
+          model: models[index] || "",
+          serviceType: serviceTypes[index] || "",
+          description: descriptions[index] || "",
+        }))
+      : [
+          {
+            itemType: formData.get("itemType"),
+            brand: formData.get("brand"),
+            model: formData.get("model"),
+            serviceType: formData.get("serviceType"),
+            description: formData.get("description"),
+          },
+        ];
+
+  const itemPayloads = z.array(createManualRepairRequestItemSchema).min(1).parse(itemPayloadRaw);
+
+  for (const itemPayload of itemPayloads) {
+    await createManualAdminRepairRequest({
+      ...sharedPayload,
+      ...itemPayload,
+      email: sharedPayload.email || null,
+      preferredContactMethod: sharedPayload.preferredContactMethod ?? "phone",
+      dropOffMethod: sharedPayload.dropOffMethod ?? "already_dropped_off",
+      estimatedCompletion: sharedPayload.estimatedCompletion || null,
+      status: sharedPayload.status ?? "request_received",
+    });
+  }
+  revalidatePath(returnTo);
+  revalidateOperationsModules();
+  revalidatePath("/admin/repairs");
+}
+
+export async function upsertWatchBrandAction(formData: FormData) {
+  const returnTo = getAdminReturnPath(formData, "/admin/operations/watch-db");
+  const payload = upsertWatchBrandSchema.parse({
+    id: formData.get("id") || undefined,
+    name: formData.get("name"),
+    country: formData.get("country") || undefined,
+    website: formData.get("website") || undefined,
+    notes: formData.get("notes") || undefined,
+  });
+
+  await upsertAdminWatchBrand({
+    ...payload,
+    country: payload.country || null,
+    website: payload.website || null,
+  });
+  revalidatePath(returnTo);
+  revalidateOperationsModules();
+}
+
+export async function upsertWatchCaliberAction(formData: FormData) {
+  const returnTo = getAdminReturnPath(formData, "/admin/operations/watch-db");
+  const payload = upsertWatchCaliberSchema.parse({
+    id: formData.get("id") || undefined,
+    brandId: formData.get("brandId") || undefined,
+    caliberName: formData.get("caliberName"),
+    movementType: formData.get("movementType"),
+    powerReserveHours: formData.get("powerReserveHours"),
+    frequencyBph: formData.get("frequencyBph"),
+    jewels: formData.get("jewels"),
+    diameterMm: formData.get("diameterMm"),
+    heightMm: formData.get("heightMm"),
+    hasHacking: formData.get("hasHacking") ? "true" : "false",
+    hasHandWinding: formData.get("hasHandWinding") ? "true" : "false",
+    notes: formData.get("notes") || undefined,
+  });
+
+  await upsertAdminWatchCaliber({
+    ...payload,
+    brandId: payload.brandId || null,
+    hasHacking: payload.hasHacking === "true",
+    hasHandWinding: payload.hasHandWinding === "true",
+  });
+  revalidatePath(returnTo);
+  revalidateOperationsModules();
+}
+
+export async function upsertWatchModelAction(formData: FormData) {
+  const returnTo = getAdminReturnPath(formData, "/admin/operations/watch-db");
+  const payload = upsertWatchModelSchema.parse({
+    id: formData.get("id") || undefined,
+    brandId: formData.get("brandId") || undefined,
+    modelName: formData.get("modelName"),
+    collection: formData.get("collection") || undefined,
+    targetGender: formData.get("targetGender") || undefined,
+    notes: formData.get("notes") || undefined,
+  });
+
+  await upsertAdminWatchModel({
+    ...payload,
+    brandId: payload.brandId || null,
+  });
+  revalidatePath(returnTo);
+  revalidateOperationsModules();
+}
+
+export async function upsertWatchReferenceAction(formData: FormData) {
+  const returnTo = getAdminReturnPath(formData, "/admin/operations/watch-db");
+  const payload = upsertWatchReferenceSchema.parse({
+    id: formData.get("id") || undefined,
+    modelId: formData.get("modelId"),
+    referenceCode: formData.get("referenceCode"),
+    caliberId: formData.get("caliberId") || undefined,
+    caseSizeMm: formData.get("caseSizeMm"),
+    lugWidthMm: formData.get("lugWidthMm"),
+    waterResistanceM: formData.get("waterResistanceM"),
+    crystal: formData.get("crystal") || undefined,
+    caseMaterial: formData.get("caseMaterial") || undefined,
+    dialColor: formData.get("dialColor") || undefined,
+    strapType: formData.get("strapType") || undefined,
+    productionFromYear: formData.get("productionFromYear"),
+    productionToYear: formData.get("productionToYear"),
+    notes: formData.get("notes") || undefined,
+  });
+
+  await upsertAdminWatchReference({
+    ...payload,
+    caliberId: payload.caliberId || null,
+  });
+  revalidatePath(returnTo);
+  revalidateOperationsModules();
+}
+
+export async function upsertInventoryCompatibilityAction(formData: FormData) {
+  const returnTo = getAdminReturnPath(formData, "/admin/operations/watch-db");
+  const payload = upsertInventoryCompatibilitySchema.parse({
+    id: formData.get("id") || undefined,
+    inventoryItemId: formData.get("inventoryItemId"),
+    caliberId: formData.get("caliberId") || undefined,
+    modelId: formData.get("modelId") || undefined,
+    referenceId: formData.get("referenceId") || undefined,
+    notes: formData.get("notes") || undefined,
+  });
+
+  await upsertAdminInventoryCompatibility({
+    ...payload,
+    caliberId: payload.caliberId || null,
+    modelId: payload.modelId || null,
+    referenceId: payload.referenceId || null,
+  });
+  revalidatePath(returnTo);
+  revalidateOperationsModules();
+}
+
+export async function createRepairPartUsageAction(formData: FormData) {
+  const returnTo = getAdminReturnPath(formData, "/admin/operations/workshop");
+  const usageWorkOrderIds = formData
+    .getAll("usageWorkOrderId")
+    .map((value) => (typeof value === "string" ? value.trim() : ""));
+  const usageInventoryItemIds = formData
+    .getAll("usageInventoryItemId")
+    .map((value) => (typeof value === "string" ? value.trim() : ""));
+  const usageQuantities = formData
+    .getAll("usageQuantity")
+    .map((value) => (typeof value === "string" ? value : ""));
+  const usageUnitCosts = formData
+    .getAll("usageUnitCost")
+    .map((value) => (typeof value === "string" ? value : ""));
+  const usageNotes = formData
+    .getAll("usageNote")
+    .map((value) => (typeof value === "string" ? value : ""));
+
+  const linesRaw =
+    usageWorkOrderIds.length > 0
+      ? usageWorkOrderIds.map((workOrderId, index) => ({
+          workOrderId,
+          inventoryItemId: usageInventoryItemIds[index] || "",
+          quantity: usageQuantities[index] || "",
+          unitCost: usageUnitCosts[index] || undefined,
+          note: usageNotes[index] || undefined,
+        }))
+      : [
+          {
+            workOrderId: formData.get("workOrderId"),
+            inventoryItemId: formData.get("inventoryItemId"),
+            quantity: formData.get("quantity"),
+            unitCost: formData.get("unitCost"),
+            note: formData.get("note") || undefined,
+          },
+        ];
+
+  const payloadLines = z.array(createRepairPartUsageSchema).min(1).parse(linesRaw);
+
+  for (const payload of payloadLines) {
+    await createAdminRepairPartUsage(payload);
+  }
+  revalidatePath(returnTo);
+  revalidateOperationsModules();
+}
+
 export async function upsertWorkOrderAction(formData: FormData) {
+  const returnTo = getAdminReturnPath(formData, "/admin/operations/workshop");
   const payload = upsertWorkOrderSchema.parse({
     id: formData.get("id") || undefined,
     repairRequestId: formData.get("repairRequestId"),
@@ -918,7 +1680,8 @@ export async function upsertWorkOrderAction(formData: FormData) {
     ...payload,
     approvedByCustomer: payload.approvedByCustomer === "true",
   });
-  revalidatePath("/admin/operations");
+  revalidatePath(returnTo);
+  revalidateOperationsModules();
   revalidatePath("/admin/repairs");
 }
 
@@ -971,4 +1734,132 @@ export async function upsertAffiliatePayoutAction(formData: FormData) {
 
   await upsertAdminAffiliatePayout(payload);
   revalidatePath("/admin/growth");
+}
+
+const upsertHeroSlideSchema = z.object({
+  id: z.string().optional(),
+  slideType: z.enum(heroSlideTypes),
+  status: z.enum(heroSlideStatuses),
+  sortOrder: z.coerce.number().int().nonnegative(),
+  headline: z.string().trim().optional(),
+  subheadline: z.string().trim().optional(),
+  ctaLabel: z.string().trim().optional(),
+  ctaHref: z.string().trim().optional(),
+  secondaryCtaLabel: z.string().trim().optional(),
+  secondaryCtaHref: z.string().trim().optional(),
+  backgroundImageUrl: z.string().trim().optional(),
+  backgroundImageAlt: z.string().trim().optional(),
+  videoUrl: z.string().trim().optional(),
+  videoPosterUrl: z.string().trim().optional(),
+  productId: z.string().trim().optional(),
+});
+
+const deleteHeroSlideSchema = z.object({
+  slideId: z.string().min(1),
+});
+
+const uploadHeroSlideImageSchema = z.object({
+  slideId: z.string().min(1),
+  imageField: z.enum(["backgroundImage", "videoPoster", "video"]),
+});
+
+export async function upsertHeroSlideAction(formData: FormData) {
+  const payload = upsertHeroSlideSchema.parse({
+    id: formData.get("id") || undefined,
+    slideType: formData.get("slideType"),
+    status: formData.get("status"),
+    sortOrder: formData.get("sortOrder"),
+    headline: formData.get("headline") || undefined,
+    subheadline: formData.get("subheadline") || undefined,
+    ctaLabel: formData.get("ctaLabel") || undefined,
+    ctaHref: formData.get("ctaHref") || undefined,
+    secondaryCtaLabel: formData.get("secondaryCtaLabel") || undefined,
+    secondaryCtaHref: formData.get("secondaryCtaHref") || undefined,
+    backgroundImageUrl: formData.get("backgroundImageUrl") || undefined,
+    backgroundImageAlt: formData.get("backgroundImageAlt") || undefined,
+    videoUrl: formData.get("videoUrl") || undefined,
+    videoPosterUrl: formData.get("videoPosterUrl") || undefined,
+    productId: formData.get("productId") || undefined,
+  });
+
+  const slideId = await upsertAdminHeroSlide({
+    id: payload.id,
+    slideType: payload.slideType,
+    status: payload.status,
+    sortOrder: payload.sortOrder,
+    headline: payload.headline ?? null,
+    subheadline: payload.subheadline ?? null,
+    ctaLabel: payload.ctaLabel ?? null,
+    ctaHref: payload.ctaHref ?? null,
+    secondaryCtaLabel: payload.secondaryCtaLabel ?? null,
+    secondaryCtaHref: payload.secondaryCtaHref ?? null,
+    backgroundImageUrl: payload.backgroundImageUrl ?? null,
+    backgroundImageAlt: payload.backgroundImageAlt ?? null,
+    videoUrl: payload.videoUrl ?? null,
+    videoPosterUrl: payload.videoPosterUrl ?? null,
+    productId: payload.productId ?? null,
+  });
+
+  // Handle inline file uploads (background image, video poster, video)
+  const uploadTargets = ["backgroundImage", "videoPoster", "video"] as const;
+  for (const field of uploadTargets) {
+    const file = formData.get(`${field}File`);
+    if (!(file instanceof File) || file.size === 0 || file.size > maxUploadSizeBytes) {
+      continue;
+    }
+    const isVideo = field === "video";
+    if (!file.type.startsWith(isVideo ? "video/" : "image/")) {
+      continue;
+    }
+    const fileBytes = new Uint8Array(await file.arrayBuffer());
+    await uploadAdminHeroSlideImage({
+      slideId,
+      imageField: field,
+      fileName: file.name,
+      fileType: file.type,
+      fileBytes,
+    });
+  }
+
+  revalidatePath("/");
+  revalidatePath("/admin/hero-slides");
+}
+
+export async function deleteHeroSlideAction(formData: FormData) {
+  const payload = deleteHeroSlideSchema.parse({
+    slideId: formData.get("slideId"),
+  });
+
+  await deleteAdminHeroSlide(payload.slideId);
+  revalidatePath("/");
+  revalidatePath("/admin/hero-slides");
+}
+
+export async function uploadHeroSlideImageAction(formData: FormData) {
+  const payload = uploadHeroSlideImageSchema.parse({
+    slideId: formData.get("slideId"),
+    imageField: formData.get("imageField"),
+  });
+
+  const file = formData.get("imageFile");
+  if (!(file instanceof File) || file.size === 0 || file.size > maxUploadSizeBytes) {
+    return;
+  }
+
+  const isVideo = payload.imageField === "video";
+  if (!file.type.startsWith(isVideo ? "video/" : "image/")) {
+    return;
+  }
+
+  const fileBytes = new Uint8Array(await file.arrayBuffer());
+  await uploadAdminHeroSlideImage({
+    slideId: payload.slideId,
+    imageField: payload.imageField,
+    fileName: file.name,
+    fileType: file.type,
+    fileBytes,
+  });
+
+  revalidatePath("/");
+  revalidatePath("/admin/hero-slides");
 }

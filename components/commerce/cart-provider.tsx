@@ -48,15 +48,29 @@ function loadStoredCart() {
 }
 
 export function CartProvider({ children }: { children: React.ReactNode }) {
-  const [items, setItems] = useState<CartItem[]>(() => loadStoredCart());
+  const [items, setItems] = useState<CartItem[]>([]);
+  const [hasHydratedStorage, setHasHydratedStorage] = useState(false);
 
   useEffect(() => {
-    if (typeof window === "undefined") {
+    if (typeof window === "undefined" || hasHydratedStorage) {
+      return;
+    }
+
+    const frame = window.requestAnimationFrame(() => {
+      setItems(loadStoredCart());
+      setHasHydratedStorage(true);
+    });
+
+    return () => window.cancelAnimationFrame(frame);
+  }, [hasHydratedStorage]);
+
+  useEffect(() => {
+    if (typeof window === "undefined" || !hasHydratedStorage) {
       return;
     }
 
     window.localStorage.setItem(CART_STORAGE_KEY, JSON.stringify(items));
-  }, [items]);
+  }, [hasHydratedStorage, items]);
 
   const value = useMemo<CartContextValue>(() => {
     const itemCount = items.reduce((sum, item) => sum + item.quantity, 0);

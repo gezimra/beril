@@ -1,16 +1,12 @@
 import { z } from "zod";
 
 import { deliveryMethods, paymentMethods } from "@/types/domain";
+import { phoneInputSchema } from "@/lib/validations/phone";
 
 export const checkoutSchema = z
   .object({
     customerName: z.string().trim().min(2),
-    phone: z
-      .string()
-      .trim()
-      .min(7)
-      .max(24)
-      .regex(/^\+?[0-9\s\-()]{7,24}$/, "Provide a valid phone number."),
+    phone: phoneInputSchema,
     email: z.string().trim().email().optional().or(z.literal("")),
     country: z.string().trim().min(2),
     city: z.string().trim().min(2),

@@ -6,6 +6,8 @@ import {
   upsertNotificationTemplateAction,
 } from "@/app/admin/actions";
 import { Container } from "@/components/layout/container";
+import { FloatInput, FloatSelect, FloatTextarea } from "@/components/ui/float-field";
+import { PhoneInput } from "@/components/ui/phone-input";
 import { StatusBadge } from "@/components/ui/status-badge";
 import {
   listAdminNotificationJobs,
@@ -13,6 +15,7 @@ import {
   listAdminSupportMessages,
   listAdminSupportThreads,
 } from "@/lib/db/crm-support";
+import { formatStatusLabel } from "@/lib/utils/status-label";
 import {
   automationTriggers,
   notificationChannels,
@@ -63,24 +66,23 @@ export default async function AdminSupportPage({
       <div className="grid gap-6 xl:grid-cols-[minmax(0,1.3fr)_minmax(0,1fr)]">
         <section className="space-y-4">
           <form method="get" className="surface-panel grid gap-3 p-4 sm:grid-cols-[1fr_13rem_auto]">
-            <input
+            <FloatInput
               name="search"
               defaultValue={search}
-              placeholder="Search support subject"
-              className="w-full rounded-lg border border-graphite/18 bg-white/85 px-3 py-2 text-sm"
+              label="Search support subject"
             />
-            <select
+            <FloatSelect
               name="status"
               defaultValue={status}
-              className="rounded-lg border border-graphite/18 bg-white/85 px-3 py-2 text-sm"
+              label="Status"
             >
               <option value="">All statuses</option>
               {supportThreadStatuses.map((item) => (
                 <option key={item} value={item}>
-                  {item}
+                  {formatStatusLabel(item)}
                 </option>
               ))}
-            </select>
+            </FloatSelect>
             <button
               type="submit"
               className="inline-flex h-10 items-center justify-center rounded-full bg-walnut px-5 text-xs uppercase tracking-[0.12em] text-white"
@@ -91,48 +93,43 @@ export default async function AdminSupportPage({
 
           <form action={createSupportThreadAction} className="surface-panel space-y-2 p-4">
             <p className="text-xs uppercase tracking-[0.14em] text-graphite/62">Create Thread</p>
-            <input
+            <FloatInput
               name="subject"
               required
-              placeholder="Subject"
-              className="w-full rounded-lg border border-graphite/18 bg-white/85 px-3 py-2 text-sm"
+              label="Subject"
             />
-            <textarea
+            <FloatTextarea
               name="message"
               rows={3}
               required
-              placeholder="First message"
-              className="w-full rounded-lg border border-graphite/18 bg-white/85 px-3 py-2 text-sm"
+              label="First message"
             />
             <div className="grid gap-2 sm:grid-cols-2">
-              <select
+              <FloatSelect
                 name="channel"
                 defaultValue="web_chat"
-                className="rounded-lg border border-graphite/18 bg-white/85 px-3 py-2 text-sm"
+                label="Channel"
               >
                 {supportChannels.map((item) => (
                   <option key={item} value={item}>
-                    {item}
+                    {formatStatusLabel(item)}
                   </option>
                 ))}
-              </select>
-              <input
+              </FloatSelect>
+              <FloatInput
                 name="customerName"
-                placeholder="Customer name"
-                className="rounded-lg border border-graphite/18 bg-white/85 px-3 py-2 text-sm"
+                label="Customer name"
               />
             </div>
             <div className="grid gap-2 sm:grid-cols-2">
-              <input
+              <FloatInput
                 name="customerEmail"
                 type="email"
-                placeholder="Email"
-                className="rounded-lg border border-graphite/18 bg-white/85 px-3 py-2 text-sm"
+                label="Email"
               />
-              <input
+              <PhoneInput
                 name="customerPhone"
-                placeholder="Phone"
-                className="rounded-lg border border-graphite/18 bg-white/85 px-3 py-2 text-sm"
+                label="Phone"
               />
             </div>
             <button
@@ -161,24 +158,27 @@ export default async function AdminSupportPage({
                       {thread.subject}
                     </a>
                     <span className="text-xs uppercase tracking-[0.1em] text-graphite/65">
-                      {thread.status}
+                      {formatStatusLabel(thread.status)}
                     </span>
                   </div>
-                  <p className="text-xs text-graphite/62">{thread.channel}</p>
+                  <p className="text-xs text-graphite/62">
+                    {formatStatusLabel(thread.channel)}
+                  </p>
 
                   <form action={updateSupportThreadStatusAction} className="mt-2 flex gap-2">
                     <input type="hidden" name="threadId" value={thread.id} />
-                    <select
+                    <FloatSelect
                       name="status"
                       defaultValue={thread.status}
-                      className="w-full rounded-lg border border-graphite/18 bg-white/85 px-3 py-2 text-xs"
+                      label="Status"
+                      wrapperClassName="w-full"
                     >
                       {supportThreadStatuses.map((item) => (
                         <option key={item} value={item}>
-                          {item}
+                          {formatStatusLabel(item)}
                         </option>
                       ))}
-                    </select>
+                    </FloatSelect>
                     <button
                       type="submit"
                       className="inline-flex h-9 items-center rounded-full border border-graphite/18 bg-white px-3 text-[0.65rem] uppercase tracking-[0.1em] text-graphite"
@@ -209,7 +209,7 @@ export default async function AdminSupportPage({
                         className="rounded-lg border border-graphite/10 bg-white/80 px-3 py-2 text-sm"
                       >
                         <p className="text-xs uppercase tracking-[0.1em] text-graphite/62">
-                          {message.direction}
+                          {formatStatusLabel(message.direction)}
                         </p>
                         <p className="mt-1 text-graphite/84">{message.message}</p>
                       </li>
@@ -219,12 +219,11 @@ export default async function AdminSupportPage({
                 <form action={createSupportMessageAction} className="space-y-2">
                   <input type="hidden" name="threadId" value={activeThreadId} />
                   <input type="hidden" name="direction" value="outbound" />
-                  <textarea
+                  <FloatTextarea
                     name="message"
                     rows={3}
                     required
-                    placeholder="Reply to customer"
-                    className="w-full rounded-lg border border-graphite/18 bg-white/85 px-3 py-2 text-sm"
+                    label="Reply to customer"
                   />
                   <button
                     type="submit"
@@ -240,48 +239,45 @@ export default async function AdminSupportPage({
           <article className="surface-panel space-y-3 p-4">
             <h2 className="text-2xl text-graphite">Notification Templates</h2>
             <form action={upsertNotificationTemplateAction} className="space-y-2 rounded-lg border border-graphite/12 bg-white/70 p-3">
-              <input
+              <FloatInput
                 name="key"
                 required
-                placeholder="order_created_email"
-                className="w-full rounded-lg border border-graphite/18 bg-white/85 px-3 py-2 text-sm"
+                label="Template key"
               />
-              <input
+              <FloatInput
                 name="title"
                 required
-                placeholder="Order Created Email"
-                className="w-full rounded-lg border border-graphite/18 bg-white/85 px-3 py-2 text-sm"
+                label="Template title"
               />
               <div className="grid gap-2 sm:grid-cols-2">
-                <select
+                <FloatSelect
                   name="channel"
                   defaultValue="email"
-                  className="rounded-lg border border-graphite/18 bg-white/85 px-3 py-2 text-sm"
+                  label="Channel"
                 >
                   {notificationChannels.map((item) => (
                     <option key={item} value={item}>
-                      {item}
+                      {formatStatusLabel(item)}
                     </option>
                   ))}
-                </select>
-                <select
+                </FloatSelect>
+                <FloatSelect
                   name="trigger"
                   defaultValue="order_created"
-                  className="rounded-lg border border-graphite/18 bg-white/85 px-3 py-2 text-sm"
+                  label="Trigger"
                 >
                   {automationTriggers.map((item) => (
                     <option key={item} value={item}>
-                      {item}
+                      {formatStatusLabel(item)}
                     </option>
                   ))}
-                </select>
+                </FloatSelect>
               </div>
-              <textarea
+              <FloatTextarea
                 name="body"
                 rows={3}
                 required
-                placeholder="Template body"
-                className="w-full rounded-lg border border-graphite/18 bg-white/85 px-3 py-2 text-sm"
+                label="Template body"
               />
               <label className="flex items-center gap-2 text-sm text-graphite/74">
                 <input type="checkbox" name="isActive" defaultChecked />
@@ -303,7 +299,7 @@ export default async function AdminSupportPage({
                 >
                   <p className="font-medium text-graphite">{template.title}</p>
                   <p className="text-xs text-graphite/62">
-                    {template.key} | {template.channel} | {template.trigger}
+                    {template.key} | {formatStatusLabel(template.channel)} | {formatStatusLabel(template.trigger)}
                   </p>
                 </li>
               ))}
@@ -313,50 +309,47 @@ export default async function AdminSupportPage({
           <article className="surface-panel space-y-3 p-4">
             <h2 className="text-2xl text-graphite">Queue Notification Job</h2>
             <form action={queueNotificationJobAction} className="space-y-2 rounded-lg border border-graphite/12 bg-white/70 p-3">
-              <input
+              <FloatInput
                 name="customerProfileId"
-                placeholder="Customer profile ID (optional)"
-                className="w-full rounded-lg border border-graphite/18 bg-white/85 px-3 py-2 text-sm"
+                label="Customer profile ID (optional)"
               />
-              <input
+              <FloatInput
                 name="templateId"
-                placeholder="Template ID (optional)"
-                className="w-full rounded-lg border border-graphite/18 bg-white/85 px-3 py-2 text-sm"
+                label="Template ID (optional)"
               />
               <div className="grid gap-2 sm:grid-cols-2">
-                <select
+                <FloatSelect
                   name="channel"
                   defaultValue="email"
-                  className="rounded-lg border border-graphite/18 bg-white/85 px-3 py-2 text-sm"
+                  label="Channel"
                 >
                   {notificationChannels.map((item) => (
                     <option key={item} value={item}>
-                      {item}
+                      {formatStatusLabel(item)}
                     </option>
                   ))}
-                </select>
-                <select
+                </FloatSelect>
+                <FloatSelect
                   name="trigger"
                   defaultValue="order_created"
-                  className="rounded-lg border border-graphite/18 bg-white/85 px-3 py-2 text-sm"
+                  label="Trigger"
                 >
                   {automationTriggers.map((item) => (
                     <option key={item} value={item}>
-                      {item}
+                      {formatStatusLabel(item)}
                     </option>
                   ))}
-                </select>
+                </FloatSelect>
               </div>
-              <input
+              <FloatInput
                 name="scheduledFor"
                 type="datetime-local"
-                className="w-full rounded-lg border border-graphite/18 bg-white/85 px-3 py-2 text-sm"
+                label="Scheduled for"
               />
-              <textarea
+              <FloatTextarea
                 name="payloadJson"
                 rows={2}
-                placeholder='{"orderCode":"BRL-O-2026-00001"}'
-                className="w-full rounded-lg border border-graphite/18 bg-white/85 px-3 py-2 font-mono text-xs"
+                label="Payload JSON"
               />
               <button
                 type="submit"
@@ -372,9 +365,9 @@ export default async function AdminSupportPage({
                   key={job.id}
                   className="rounded-lg border border-graphite/10 bg-white/75 px-3 py-2 text-sm"
                 >
-                  <p className="font-medium text-graphite">{job.channel}</p>
+                  <p className="font-medium text-graphite">{formatStatusLabel(job.channel)}</p>
                   <p className="text-xs text-graphite/62">
-                    {job.trigger} | {job.status}
+                    {formatStatusLabel(job.trigger)} | {formatStatusLabel(job.status)}
                   </p>
                 </li>
               ))}
@@ -385,4 +378,3 @@ export default async function AdminSupportPage({
     </Container>
   );
 }
-

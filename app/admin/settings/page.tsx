@@ -1,5 +1,6 @@
-import { saveSiteSettingsAction } from "@/app/admin/actions";
+import { saveSiteSettingsAction, uploadSiteImageAction } from "@/app/admin/actions";
 import { Container } from "@/components/layout/container";
+import { FloatInput, FloatTextarea } from "@/components/ui/float-field";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { getExtendedSiteSettings } from "@/lib/db/admin";
 
@@ -17,73 +18,62 @@ export default async function AdminSettingsPage() {
       </header>
 
       <form action={saveSiteSettingsAction} className="surface-panel grid gap-4 p-5 sm:grid-cols-2">
-        <input
+        <FloatInput
+          label="Business name"
           name="business.name"
           defaultValue={settings.businessName}
-          placeholder="Business name"
-          className="rounded-lg border border-graphite/18 bg-white/85 px-3 py-2 text-sm"
         />
-        <input
+        <FloatInput
+          label="Store phone"
           name="store.phone"
           defaultValue={settings.storePhone}
-          placeholder="Store phone"
-          className="rounded-lg border border-graphite/18 bg-white/85 px-3 py-2 text-sm"
         />
-        <input
+        <FloatInput
+          label="Store whatsapp"
           name="store.whatsapp"
           defaultValue={settings.storeWhatsapp}
-          placeholder="Store whatsapp"
-          className="rounded-lg border border-graphite/18 bg-white/85 px-3 py-2 text-sm"
         />
-        <input
+        <FloatInput
+          label="Store hours"
           name="store.hours"
           defaultValue={settings.storeHours}
-          placeholder="Store hours"
-          className="rounded-lg border border-graphite/18 bg-white/85 px-3 py-2 text-sm"
         />
-        <input
+        <FloatInput
+          label="Store email"
           name="store.email"
           defaultValue={settings.storeEmail}
-          placeholder="Store email"
-          className="rounded-lg border border-graphite/18 bg-white/85 px-3 py-2 text-sm"
         />
-        <input
+        <FloatInput
+          label="Home delivery fee (EUR)"
           name="commerce.delivery_fee_home"
           defaultValue={settings.homeDeliveryFee}
-          placeholder="Home delivery fee (EUR)"
-          className="rounded-lg border border-graphite/18 bg-white/85 px-3 py-2 text-sm"
         />
-        <input
+        <FloatInput
+          label="Map URL"
           name="store.map_url"
           defaultValue={settings.mapUrl}
-          placeholder="Map URL"
-          className="sm:col-span-2 rounded-lg border border-graphite/18 bg-white/85 px-3 py-2 text-sm"
+          wrapperClassName="sm:col-span-2"
         />
-        <input
+        <FloatInput
+          label="Store address"
           name="store.address"
           defaultValue={settings.storeAddress}
-          placeholder="Store address"
-          className="sm:col-span-2 rounded-lg border border-graphite/18 bg-white/85 px-3 py-2 text-sm"
+          wrapperClassName="sm:col-span-2"
         />
-        <input
+        <FloatInput
+          label="Default SEO title"
           name="seo.default_title"
           defaultValue={settings.defaultSeoTitle}
-          placeholder="Default SEO title"
-          className="sm:col-span-2 rounded-lg border border-graphite/18 bg-white/85 px-3 py-2 text-sm"
+          wrapperClassName="sm:col-span-2"
         />
-        <textarea
+        <FloatTextarea
+          label="Default SEO description"
           name="seo.default_description"
           defaultValue={settings.defaultSeoDescription}
           rows={2}
-          placeholder="Default SEO description"
-          className="sm:col-span-2 rounded-lg border border-graphite/18 bg-white/85 px-3 py-2 text-sm"
+          wrapperClassName="sm:col-span-2"
         />
-        <input
-          name="seo.default_image"
-          defaultValue={settings.defaultSeoImage}
-          placeholder="Default SEO image"
-          className="sm:col-span-2 rounded-lg border border-graphite/18 bg-white/85 px-3 py-2 text-sm"
-        />
+        <input type="hidden" name="seo.default_image" value={settings.defaultSeoImage} />
 
         <input type="hidden" name="hero.headline" value={settings.heroHeadline} />
         <input type="hidden" name="hero.subheadline" value={settings.heroSubheadline} />
@@ -134,6 +124,43 @@ export default async function AdminSettingsPage() {
           className="sm:col-span-2 inline-flex h-10 items-center justify-center rounded-full bg-walnut px-5 text-xs uppercase tracking-[0.12em] text-white"
         >
           Save Settings
+        </button>
+      </form>
+
+      <form
+        action={uploadSiteImageAction}
+        className="surface-panel grid gap-3 p-5 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto]"
+      >
+        <input type="hidden" name="settingKey" value="seo.default_image" />
+        <div className="sm:col-span-3">
+          <p className="text-xs uppercase tracking-[0.14em] text-graphite/62">
+            Default SEO Image
+          </p>
+          {settings.defaultSeoImage ? (
+            <a
+              href={settings.defaultSeoImage}
+              target="_blank"
+              rel="noreferrer"
+              className="mt-1 block text-xs text-graphite/72 underline"
+            >
+              Current image
+            </a>
+          ) : (
+            <p className="mt-1 text-xs text-graphite/50">No image set</p>
+          )}
+        </div>
+        <input
+          type="file"
+          name="siteImageFile"
+          accept="image/*"
+          required
+          className="sm:col-span-2 rounded-lg border border-graphite/18 bg-white/85 px-3 py-2 text-sm"
+        />
+        <button
+          type="submit"
+          className="inline-flex h-10 items-center justify-center rounded-full border border-graphite/18 bg-white/85 px-4 text-xs uppercase tracking-[0.12em] text-graphite"
+        >
+          Upload SEO Image
         </button>
       </form>
     </Container>

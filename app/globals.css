@@ -42,6 +42,11 @@ body {
   text-rendering: optimizeLegibility;
 }
 
+html,
+body {
+  overflow-x: hidden;
+}
+
 h1,
 h2,
 h3,
@@ -118,7 +123,7 @@ a {
   }
 
   .input-premium {
-    @apply h-11 w-full rounded-xl border border-graphite/16 bg-white/86 px-3 text-sm text-graphite transition focus:border-gold focus:bg-white focus:outline-none;
+    @apply h-10 w-full rounded-xl border border-graphite/16 bg-white/86 px-3 text-sm text-graphite transition focus:border-gold focus:bg-white focus:outline-none sm:h-11;
   }
 
   .textarea-premium {
@@ -148,4 +153,104 @@ a {
   .trust-row {
     @apply flex items-start gap-3 rounded-xl border border-graphite/10 bg-white/82 px-4 py-3.5 text-sm text-graphite/80;
   }
+
+  .hero-slide-frame {
+    @apply h-[470px] sm:h-[560px] lg:h-[70svh] lg:min-h-[560px] lg:max-h-[760px];
+  }
+
+  .admin-primary-btn {
+    @apply inline-flex h-10 items-center justify-center rounded-full px-4 text-xs font-medium uppercase tracking-[0.1em] text-white sm:h-11 sm:px-5 sm:text-sm;
+  }
+
+  .admin-primary-btn-walnut {
+    @apply inline-flex h-10 items-center justify-center rounded-full bg-walnut px-4 text-xs font-medium uppercase tracking-[0.1em] text-white sm:h-11 sm:px-5 sm:text-sm;
+  }
+
+  .admin-primary-btn-mineral {
+    @apply inline-flex h-10 items-center justify-center rounded-full bg-mineral px-4 text-xs font-medium uppercase tracking-[0.1em] text-white sm:h-11 sm:px-5 sm:text-sm;
+  }
+
+  .admin-secondary-btn {
+    @apply inline-flex h-9 items-center justify-center rounded-full border border-graphite/18 bg-white/85 px-3 text-[0.68rem] uppercase tracking-[0.12em] text-graphite sm:h-10 sm:px-4 sm:text-xs;
+  }
+
+  .admin-advanced {
+    @apply rounded-lg border border-graphite/10 bg-white/62;
+  }
+
+  .admin-advanced > summary {
+    @apply cursor-pointer px-3 py-2 text-xs uppercase tracking-[0.14em] text-graphite/66;
+    list-style: none;
+  }
+
+  .admin-advanced > summary::-webkit-details-marker {
+    display: none;
+  }
+}
+
+/* Floating label field — pure CSS, no JS required */
+.float-field {
+  position: relative;
+}
+
+.float-field > input,
+.float-field > textarea,
+.float-field > select {
+  width: 100%;
+  border-radius: 0.5rem;
+  border: 1px solid rgba(44, 44, 44, 0.18);
+  background: rgba(255, 255, 255, 0.85);
+  padding: 1.25rem 0.75rem 0.45rem;
+  font-size: 0.875rem;
+  color: var(--color-graphite);
+  transition: border-color 180ms ease;
+}
+
+.float-field > input:focus,
+.float-field > textarea:focus,
+.float-field > select:focus {
+  border-color: var(--color-gold);
+  outline: none;
+  background: white;
+}
+
+.float-field > label {
+  position: absolute;
+  left: 0.75rem;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 0.875rem;
+  color: rgba(44, 44, 44, 0.44);
+  pointer-events: none;
+  transition: all 160ms ease;
+}
+
+.float-field > textarea ~ label {
+  top: 0.9rem;
+  transform: none;
+}
+
+/* Label floats up when input is focused or has content */
+.float-field > input:focus ~ label,
+.float-field > input:not(:placeholder-shown) ~ label,
+.float-field > textarea:focus ~ label,
+.float-field > textarea:not(:placeholder-shown) ~ label,
+.float-field > select:focus ~ label,
+.float-field > select:valid ~ label {
+  top: 0.3rem;
+  transform: none;
+  font-size: 0.625rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: rgba(44, 44, 44, 0.58);
+}
+
+/* Select always shows label up since it always has a value */
+.float-field > select ~ label {
+  top: 0.3rem;
+  transform: none;
+  font-size: 0.625rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: rgba(44, 44, 44, 0.58);
 }

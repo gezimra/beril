@@ -5,8 +5,10 @@ import {
   updateRepairStatusAction,
 } from "@/app/admin/actions";
 import { Container } from "@/components/layout/container";
+import { FloatInput, FloatSelect, FloatTextarea } from "@/components/ui/float-field";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { listAdminRepairs } from "@/lib/db/admin";
+import { formatStatusLabel } from "@/lib/utils/status-label";
 import { repairStatuses } from "@/types/domain";
 
 type AdminRepairsPageProps = {
@@ -42,24 +44,23 @@ export default async function AdminRepairsPage({
       </header>
 
       <form method="get" className="surface-panel grid gap-3 p-4 sm:grid-cols-[1fr_14rem_auto]">
-        <input
+        <FloatInput
+          label="Search"
           name="search"
           defaultValue={search}
-          placeholder="Search repair code, customer, brand, model"
-          className="w-full rounded-lg border border-graphite/18 bg-white/85 px-3 py-2 text-sm"
         />
-        <select
+        <FloatSelect
+          label="Status"
           name="status"
           defaultValue={status}
-          className="rounded-lg border border-graphite/18 bg-white/85 px-3 py-2 text-sm"
         >
           <option value="">All statuses</option>
           {repairStatuses.map((item) => (
             <option key={item} value={item}>
-              {item}
+              {formatStatusLabel(item)}
             </option>
           ))}
-        </select>
+        </FloatSelect>
         <button
           type="submit"
           className="inline-flex h-10 items-center justify-center rounded-full bg-walnut px-5 text-xs uppercase tracking-[0.12em] text-white"
@@ -88,7 +89,7 @@ export default async function AdminRepairsPage({
                     {repair.itemType} | {repair.brand} {repair.model}
                   </p>
                 </div>
-                <StatusBadge tone="premium">{repair.status}</StatusBadge>
+                <StatusBadge tone="premium">{formatStatusLabel(repair.status)}</StatusBadge>
               </div>
 
               <div className="grid gap-3 md:grid-cols-3">
@@ -97,24 +98,20 @@ export default async function AdminRepairsPage({
                   className="space-y-2 rounded-lg border border-graphite/12 bg-white/70 p-3"
                 >
                   <input type="hidden" name="repairId" value={repair.id} />
-                  <label className="text-xs uppercase tracking-[0.12em] text-graphite/62">
-                    Status update
-                  </label>
-                  <select
+                  <FloatSelect
+                    label="Status update"
                     name="status"
                     defaultValue={repair.status}
-                    className="w-full rounded-lg border border-graphite/18 bg-white/85 px-3 py-2 text-sm"
                   >
                     {repairStatuses.map((item) => (
                       <option key={item} value={item}>
-                        {item}
+                        {formatStatusLabel(item)}
                       </option>
                     ))}
-                  </select>
-                  <input
+                  </FloatSelect>
+                  <FloatInput
+                    label="Status note"
                     name="note"
-                    placeholder="Status note"
-                    className="w-full rounded-lg border border-graphite/18 bg-white/85 px-3 py-2 text-sm"
                   />
                   <label className="flex items-center gap-2 text-xs text-graphite/72">
                     <input type="checkbox" name="visibleToCustomer" value="true" />
@@ -133,22 +130,17 @@ export default async function AdminRepairsPage({
                   className="space-y-2 rounded-lg border border-graphite/12 bg-white/70 p-3"
                 >
                   <input type="hidden" name="repairId" value={repair.id} />
-                  <label className="text-xs uppercase tracking-[0.12em] text-graphite/62">
-                    Notes
-                  </label>
-                  <textarea
+                  <FloatTextarea
+                    label="Internal notes"
                     name="internalNotes"
                     rows={2}
                     defaultValue={repair.notesInternal ?? ""}
-                    placeholder="Internal notes"
-                    className="w-full rounded-lg border border-graphite/18 bg-white/85 px-3 py-2 text-sm"
                   />
-                  <textarea
+                  <FloatTextarea
+                    label="Customer-visible notes"
                     name="customerNotes"
                     rows={2}
                     defaultValue={repair.notesCustomer ?? ""}
-                    placeholder="Customer-visible notes"
-                    className="w-full rounded-lg border border-graphite/18 bg-white/85 px-3 py-2 text-sm"
                   />
                   <button
                     type="submit"
@@ -163,22 +155,18 @@ export default async function AdminRepairsPage({
                   className="space-y-2 rounded-lg border border-graphite/12 bg-white/70 p-3"
                 >
                   <input type="hidden" name="repairId" value={repair.id} />
-                  <label className="text-xs uppercase tracking-[0.12em] text-graphite/62">
-                    Estimate
-                  </label>
-                  <input
+                  <FloatInput
+                    label="Estimated completion"
                     type="date"
                     name="estimatedCompletion"
                     defaultValue={repair.estimatedCompletion ?? ""}
-                    className="w-full rounded-lg border border-graphite/18 bg-white/85 px-3 py-2 text-sm"
                   />
-                  <input
+                  <FloatInput
+                    label="Amount due"
                     type="number"
                     name="amountDue"
                     step="0.01"
                     defaultValue={repair.amountDue ?? ""}
-                    placeholder="Amount due"
-                    className="w-full rounded-lg border border-graphite/18 bg-white/85 px-3 py-2 text-sm"
                   />
                   <button
                     type="submit"
@@ -195,13 +183,9 @@ export default async function AdminRepairsPage({
                   className="space-y-2 rounded-lg border border-graphite/12 bg-white/70 p-3"
                 >
                   <input type="hidden" name="repairId" value={repair.id} />
-                  <label className="text-xs uppercase tracking-[0.12em] text-graphite/62">
-                    Staff attachment
-                  </label>
-                  <input
+                  <FloatInput
+                    label="Attachment label (optional)"
                     name="fileLabel"
-                    placeholder="Attachment label (optional)"
-                    className="w-full rounded-lg border border-graphite/18 bg-white/85 px-3 py-2 text-sm"
                   />
                   <input
                     type="file"

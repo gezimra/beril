@@ -7,6 +7,7 @@ import {
 } from "@/lib/db/crm-support";
 import { addFallbackOrder } from "@/lib/db/fallback-store";
 import { awardLoyaltyPointsForOrder, recordAffiliateConversion } from "@/lib/db/growth-loyalty";
+import { syncOrderCashbookByOrderId } from "@/lib/db/order-cashbook-sync";
 import {
   createPaymentTransactionForOrder,
   recordCouponRedemption,
@@ -254,6 +255,8 @@ export async function createOrder({
   if (historyError) {
     throw new Error(historyError.message);
   }
+
+  await syncOrderCashbookByOrderId(String(orderData.id));
 
   if (couponValidation?.valid && couponValidation.couponId && discountAmount > 0) {
     await recordCouponRedemption({

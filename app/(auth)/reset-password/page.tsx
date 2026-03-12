@@ -1,6 +1,7 @@
 import Link from "next/link";
 
 import { requestPasswordResetAction } from "@/app/(auth)/actions";
+import { FloatInput } from "@/components/ui/float-field";
 
 export const metadata = {
   title: "Reset Password",
@@ -73,20 +74,14 @@ export default async function ResetPasswordPage({
         className="space-y-4"
         aria-label="Reset password form"
       >
-        <div className="space-y-1">
-          <label htmlFor="email" className="text-sm font-medium text-graphite">
-            Email
-          </label>
-          <input
-            id="email"
-            name="email"
-            type="email"
-            placeholder="owner@beril.store"
-            required
-            autoComplete="email"
-            className="w-full rounded-xl border border-graphite/20 bg-white/80 px-4 py-3 text-sm"
-          />
-        </div>
+        <FloatInput
+          label="Email"
+          id="email"
+          name="email"
+          type="email"
+          required
+          autoComplete="email"
+        />
         <button
           type="submit"
           className="inline-flex h-11 items-center rounded-full bg-walnut px-5 text-sm font-medium text-white"

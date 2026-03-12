@@ -6,6 +6,7 @@ import { useForm } from "react-hook-form";
 
 import { Container } from "@/components/layout/container";
 import { SectionWrapper } from "@/components/layout/section-wrapper";
+import { FloatInput } from "@/components/ui/float-field";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { trackEvent } from "@/lib/analytics/track";
 import { normalizeEmail, normalizePhone } from "@/lib/utils/codes";
@@ -179,34 +180,18 @@ export default function RepairTrackPage() {
           onSubmit={onSubmit}
           className="surface-panel grid gap-4 p-6 sm:grid-cols-[1fr_1fr_auto]"
         >
-          <div className="space-y-1">
-            <label htmlFor="repairCode" className="text-sm font-medium">
-              Repair code
-            </label>
-            <input
-              id="repairCode"
-              placeholder="BRL-R-2026-00001"
-              {...register("repairCode")}
-              className="w-full rounded-lg border border-graphite/18 bg-white/85 px-3 py-2 text-sm"
-            />
-            {errors.repairCode ? (
-              <p className="text-xs text-walnut">{errors.repairCode.message}</p>
-            ) : null}
-          </div>
-          <div className="space-y-1">
-            <label htmlFor="phoneOrEmail" className="text-sm font-medium">
-              Phone or email
-            </label>
-            <input
-              id="phoneOrEmail"
-              placeholder="+383..."
-              {...register("phoneOrEmail")}
-              className="w-full rounded-lg border border-graphite/18 bg-white/85 px-3 py-2 text-sm"
-            />
-            {errors.phoneOrEmail ? (
-              <p className="text-xs text-walnut">{errors.phoneOrEmail.message}</p>
-            ) : null}
-          </div>
+          <FloatInput
+            label="Repair code"
+            id="repairCode"
+            {...register("repairCode")}
+            error={errors.repairCode?.message}
+          />
+          <FloatInput
+            label="Phone or email"
+            id="phoneOrEmail"
+            {...register("phoneOrEmail")}
+            error={errors.phoneOrEmail?.message}
+          />
           <button
             type="submit"
             disabled={isSubmitting}

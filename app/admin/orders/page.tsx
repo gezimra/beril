@@ -1,8 +1,14 @@
-import { updateOrderNotesAction, updateOrderStatusAction } from "@/app/admin/actions";
+import {
+  updateOrderNotesAction,
+  updateOrderPaymentStatusAction,
+  updateOrderStatusAction,
+} from "@/app/admin/actions";
 import { Container } from "@/components/layout/container";
+import { FloatInput, FloatSelect, FloatTextarea } from "@/components/ui/float-field";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { listAdminOrders } from "@/lib/db/admin";
-import { orderStatuses } from "@/types/domain";
+import { formatStatusLabel } from "@/lib/utils/status-label";
+import { orderStatuses, paymentStatuses } from "@/types/domain";
 
 type AdminOrdersPageProps = {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
@@ -37,24 +43,23 @@ export default async function AdminOrdersPage({
       </header>
 
       <form method="get" className="surface-panel grid gap-3 p-4 sm:grid-cols-[1fr_14rem_auto]">
-        <input
+        <FloatInput
+          label="Search"
           name="search"
           defaultValue={search}
-          placeholder="Search by order code, customer, phone"
-          className="w-full rounded-lg border border-graphite/18 bg-white/85 px-3 py-2 text-sm"
         />
-        <select
+        <FloatSelect
+          label="Status"
           name="status"
           defaultValue={status}
-          className="rounded-lg border border-graphite/18 bg-white/85 px-3 py-2 text-sm"
         >
           <option value="">All statuses</option>
           {orderStatuses.map((item) => (
             <option key={item} value={item}>
-              {item}
+              {formatStatusLabel(item)}
             </option>
           ))}
-        </select>
+        </FloatSelect>
         <button
           type="submit"
           className="inline-flex h-10 items-center justify-center rounded-full bg-walnut px-5 text-xs uppercase tracking-[0.12em] text-white"
@@ -86,8 +91,11 @@ export default async function AdminOrdersPage({
                   <p className="text-sm text-graphite/72">
                     {order.city}, {order.country} | {order.address}
                   </p>
+                  <p className="mt-1 text-xs uppercase tracking-[0.1em] text-graphite/62">
+                    {formatStatusLabel(order.paymentMethod)} | {formatStatusLabel(order.paymentStatus)}
+                  </p>
                 </div>
-                <StatusBadge tone="premium">{order.orderStatus}</StatusBadge>
+                <StatusBadge tone="premium">{formatStatusLabel(order.orderStatus)}</StatusBadge>
               </div>
 
               <div className="rounded-lg border border-graphite/10 bg-white/70 p-3">
@@ -103,27 +111,23 @@ export default async function AdminOrdersPage({
                 </ul>
               </div>
 
-              <div className="grid gap-3 md:grid-cols-2">
+              <div className="grid gap-3 lg:grid-cols-3">
                 <form action={updateOrderStatusAction} className="space-y-2 rounded-lg border border-graphite/12 bg-white/70 p-3">
                   <input type="hidden" name="orderId" value={order.id} />
-                  <label className="text-xs uppercase tracking-[0.12em] text-graphite/62">
-                    Update status
-                  </label>
-                  <select
+                  <FloatSelect
+                    label="Update status"
                     name="status"
                     defaultValue={order.orderStatus}
-                    className="w-full rounded-lg border border-graphite/18 bg-white/85 px-3 py-2 text-sm"
                   >
                     {orderStatuses.map((item) => (
                       <option key={item} value={item}>
-                        {item}
+                        {formatStatusLabel(item)}
                       </option>
                     ))}
-                  </select>
-                  <input
+                  </FloatSelect>
+                  <FloatInput
+                    label="Status note"
                     name="note"
-                    placeholder="Optional status note"
-                    className="w-full rounded-lg border border-graphite/18 bg-white/85 px-3 py-2 text-sm"
                   />
                   <button
                     type="submit"
@@ -133,16 +137,34 @@ export default async function AdminOrdersPage({
                   </button>
                 </form>
 
+                <form action={updateOrderPaymentStatusAction} className="space-y-2 rounded-lg border border-graphite/12 bg-white/70 p-3">
+                  <input type="hidden" name="orderId" value={order.id} />
+                  <FloatSelect
+                    label="Payment status"
+                    name="paymentStatus"
+                    defaultValue={order.paymentStatus}
+                  >
+                    {paymentStatuses.map((item) => (
+                      <option key={item} value={item}>
+                        {formatStatusLabel(item)}
+                      </option>
+                    ))}
+                  </FloatSelect>
+                  <button
+                    type="submit"
+                    className="inline-flex h-9 items-center rounded-full bg-walnut px-4 text-xs uppercase tracking-[0.12em] text-white"
+                  >
+                    Save Payment
+                  </button>
+                </form>
+
                 <form action={updateOrderNotesAction} className="space-y-2 rounded-lg border border-graphite/12 bg-white/70 p-3">
                   <input type="hidden" name="orderId" value={order.id} />
-                  <label className="text-xs uppercase tracking-[0.12em] text-graphite/62">
-                    Internal notes
-                  </label>
-                  <textarea
+                  <FloatTextarea
+                    label="Internal notes"
                     name="internalNotes"
                     rows={3}
                     defaultValue={order.internalNotes ?? ""}
-                    className="w-full rounded-lg border border-graphite/18 bg-white/85 px-3 py-2 text-sm"
                   />
                   <button
                     type="submit"

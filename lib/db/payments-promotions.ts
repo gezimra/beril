@@ -1,5 +1,6 @@
 import { createSupabaseServiceClient } from "@/lib/db/supabase/service";
 import { ensureCustomerProfile } from "@/lib/db/crm-support";
+import { syncOrderCashbookByOrderId } from "@/lib/db/order-cashbook-sync";
 import { normalizeEmail, normalizePhone } from "@/lib/utils/codes";
 import type {
   AdminCampaign,
@@ -1118,4 +1119,6 @@ export async function updateAdminPaymentTransactionStatus(
   if (orderError) {
     throw new Error(orderError.message);
   }
+
+  await syncOrderCashbookByOrderId(String(transaction.order_id));
 }

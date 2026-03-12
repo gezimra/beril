@@ -6,15 +6,11 @@ import {
   getCheckoutProfileForAuthenticatedCustomer,
   updateCheckoutProfileForAuthenticatedCustomer,
 } from "@/lib/db/customer-account";
+import { phoneInputSchema } from "@/lib/validations/phone";
 
 const updateCheckoutProfileSchema = z.object({
   customerName: z.string().trim().min(2),
-  phone: z
-    .string()
-    .trim()
-    .min(7)
-    .max(24)
-    .regex(/^\+?[0-9\s\-()]{7,24}$/),
+  phone: phoneInputSchema,
   country: z.string().trim().min(2),
   city: z.string().trim().min(2),
   address: z.string().trim().min(4),
@@ -70,4 +66,3 @@ export async function POST(request: Request) {
     );
   }
 }
-

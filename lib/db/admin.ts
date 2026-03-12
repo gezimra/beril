@@ -1,9 +1,12 @@
 import { createSupabaseServiceClient } from "@/lib/db/supabase/service";
+import { syncOrderCashbookByOrderId } from "@/lib/db/order-cashbook-sync";
 import {
   addFallbackRepairAttachment,
   addFallbackContact,
+  deleteFallbackHeroSlide,
   getFallbackContacts,
   getFallbackCustomerKey,
+  getFallbackHeroSlides,
   getFallbackJournalPosts,
   getFallbackOrders,
   getFallbackProducts,
@@ -13,22 +16,29 @@ import {
   updateFallbackRepair,
   updateFallbackJournalCoverImage,
   updateFallbackSiteSetting,
+  upsertFallbackHeroSlide,
   upsertFallbackJournalPost,
   upsertFallbackProduct,
 } from "@/lib/db/fallback-store";
 import { mockSiteSettings } from "@/lib/db/mock-data";
+import { normalizeEmail, normalizePhone } from "@/lib/utils/codes";
 import type {
   AdminContact,
+  AdminCustomerLookup,
   AdminCustomerRow,
   AdminDashboardStats,
+  AdminHeroSlide,
   AdminJournalPost,
   AdminOrder,
   AdminProductRow,
   AdminRepair,
 } from "@/types/admin";
 import type {
+  HeroSlideStatus,
+  HeroSlideType,
   JournalStatus,
   OrderStatus,
+  PaymentStatus,
   RepairStatus,
   StockStatus,
 } from "@/types/domain";
@@ -107,6 +117,34 @@ type RepairRow = {
     file_label: string | null;
     created_at: string;
   }>;
+};
+
+type CustomerProfileLookupRow = {
+  id: string;
+  name: string | null;
+  email: string | null;
+  phone: string | null;
+  default_city: string | null;
+  default_address: string | null;
+  default_country: string | null;
+  updated_at: string;
+};
+
+type CustomerOrderLookupRow = {
+  customer_name: string;
+  email: string | null;
+  phone: string;
+  city: string | null;
+  address: string | null;
+  country: string | null;
+  created_at: string;
+};
+
+type CustomerRepairLookupRow = {
+  customer_name: string;
+  email: string | null;
+  phone: string;
+  created_at: string;
 };
 
 const ORDER_STATUSES: OrderStatus[] = [
@@ -247,6 +285,327 @@ function includesSearch(source: string, search?: string) {
   return source.toLowerCase().includes(search.toLowerCase());
 }
 
+function normalizeLookupTerm(value: string | null | undefined) {
+  return (value ?? "").trim().toLowerCase();
+}
+
+function sanitizeIlikeTerm(value: string) {
+  return value.replace(/[,%()]/g, " ").trim();
+}
+
+function resolveCustomerLookupKey(input: {
+  name: string | null | undefined;
+  email: string | null | undefined;
+  phone: string | null | undefined;
+}) {
+  if (input.email) {
+    return `email:${normalizeEmail(input.email)}`;
+  }
+  if (input.phone) {
+    return `phone:${normalizePhone(input.phone)}`;
+  }
+  const normalizedName = normalizeLookupTerm(input.name);
+  if (normalizedName.length > 0) {
+    return `name:${normalizedName}`;
+  }
+  return `anon:${Math.random().toString(36).slice(2, 12)}`;
+}
+
+function scoreCustomerLookup(entry: AdminCustomerLookup, normalizedQuery: string) {
+  const name = normalizeLookupTerm(entry.name);
+  const email = normalizeLookupTerm(entry.email);
+  const phone = normalizeLookupTerm(entry.phone);
+  const city = normalizeLookupTerm(entry.city);
+  const address = normalizeLookupTerm(entry.address);
+
+  let score = 0;
+  if (name.startsWith(normalizedQuery)) {
+    score += 14;
+  } else if (name.includes(normalizedQuery)) {
+    score += 10;
+  }
+
+  if (email.startsWith(normalizedQuery)) {
+    score += 9;
+  } else if (email.includes(normalizedQuery)) {
+    score += 6;
+  }
+
+  if (phone.includes(normalizedQuery)) {
+    score += 6;
+  }
+
+  if (city.includes(normalizedQuery)) {
+    score += 3;
+  }
+
+  if (address.includes(normalizedQuery)) {
+    score += 2;
+  }
+
+  return score;
+}
+
+type LookupAccumulator = AdminCustomerLookup & {
+  score: number;
+  priority: number;
+};
+
+function toCustomerLookupResult(entry: LookupAccumulator): AdminCustomerLookup {
+  return {
+    key: entry.key,
+    name: entry.name,
+    email: entry.email,
+    phone: entry.phone,
+    city: entry.city,
+    address: entry.address,
+    country: entry.country,
+    lastActivityAt: entry.lastActivityAt,
+  };
+}
+
+function mergeCustomerLookup(
+  target: Map<string, LookupAccumulator>,
+  entry: AdminCustomerLookup,
+  normalizedQuery: string,
+  priority: number,
+) {
+  const key = resolveCustomerLookupKey({
+    name: entry.name,
+    email: entry.email,
+    phone: entry.phone,
+  });
+  const score = scoreCustomerLookup(entry, normalizedQuery);
+  if (score <= 0) {
+    return;
+  }
+
+  const existing = target.get(key);
+  if (!existing) {
+    target.set(key, { ...entry, key, score: score + priority, priority });
+    return;
+  }
+
+  const preferIncoming = priority >= existing.priority;
+  const newestActivity =
+    Date.parse(entry.lastActivityAt) > Date.parse(existing.lastActivityAt)
+      ? entry.lastActivityAt
+      : existing.lastActivityAt;
+
+  target.set(key, {
+    key,
+    name:
+      (preferIncoming ? entry.name : existing.name) ||
+      existing.name ||
+      entry.name,
+    email:
+      (preferIncoming ? entry.email : existing.email) ||
+      existing.email ||
+      entry.email,
+    phone:
+      (preferIncoming ? entry.phone : existing.phone) ||
+      existing.phone ||
+      entry.phone,
+    city:
+      (preferIncoming ? entry.city : existing.city) ||
+      existing.city ||
+      entry.city,
+    address:
+      (preferIncoming ? entry.address : existing.address) ||
+      existing.address ||
+      entry.address,
+    country:
+      (preferIncoming ? entry.country : existing.country) ||
+      existing.country ||
+      entry.country,
+    lastActivityAt: newestActivity,
+    score: Math.max(existing.score, score + priority),
+    priority: Math.max(existing.priority, priority),
+  });
+}
+
+export async function searchAdminCustomerLookup({
+  query,
+  limit = 8,
+}: {
+  query: string;
+  limit?: number;
+}): Promise<AdminCustomerLookup[]> {
+  const trimmed = query.trim();
+  const normalizedQuery = normalizeLookupTerm(trimmed);
+  if (normalizedQuery.length < 2) {
+    return [];
+  }
+
+  const cappedLimit = Math.max(1, Math.min(20, Math.trunc(limit)));
+  const merged = new Map<string, LookupAccumulator>();
+  const serviceClient = createSupabaseServiceClient();
+
+  if (!serviceClient) {
+    for (const order of getFallbackOrders()) {
+      if (
+        !includesSearch(
+          `${order.customerName} ${order.email ?? ""} ${order.phone} ${order.city} ${order.address}`,
+          trimmed,
+        )
+      ) {
+        continue;
+      }
+      mergeCustomerLookup(
+        merged,
+        {
+          key: "",
+          name: order.customerName,
+          email: order.email,
+          phone: order.phone,
+          city: order.city,
+          address: order.address,
+          country: order.country,
+          lastActivityAt: order.updatedAt,
+        },
+        normalizedQuery,
+        2,
+      );
+    }
+
+    for (const repair of getFallbackRepairs()) {
+      if (
+        !includesSearch(
+          `${repair.customerName} ${repair.email ?? ""} ${repair.phone}`,
+          trimmed,
+        )
+      ) {
+        continue;
+      }
+      mergeCustomerLookup(
+        merged,
+        {
+          key: "",
+          name: repair.customerName,
+          email: repair.email,
+          phone: repair.phone,
+          city: null,
+          address: null,
+          country: null,
+          lastActivityAt: repair.updatedAt,
+        },
+        normalizedQuery,
+        1,
+      );
+    }
+
+    return Array.from(merged.values())
+      .sort(
+        (a, b) =>
+          b.score - a.score ||
+          Date.parse(b.lastActivityAt) - Date.parse(a.lastActivityAt) ||
+          a.name.localeCompare(b.name),
+      )
+      .slice(0, cappedLimit)
+      .map(toCustomerLookupResult);
+  }
+
+  const ilikeSearch = sanitizeIlikeTerm(trimmed);
+  if (!ilikeSearch) {
+    return [];
+  }
+  const ilikeValue = `%${ilikeSearch}%`;
+  const fetchLimit = Math.max(cappedLimit * 3, 12);
+
+  const [profileResponse, orderResponse, repairResponse] = await Promise.all([
+    serviceClient
+      .from("customer_profiles")
+      .select(
+        "id, name, email, phone, default_city, default_address, default_country, updated_at",
+      )
+      .or(
+        `name.ilike.${ilikeValue},email.ilike.${ilikeValue},phone.ilike.${ilikeValue}`,
+      )
+      .order("updated_at", { ascending: false })
+      .limit(fetchLimit),
+    serviceClient
+      .from("orders")
+      .select("customer_name, email, phone, city, address, country, created_at")
+      .or(
+        `customer_name.ilike.${ilikeValue},email.ilike.${ilikeValue},phone.ilike.${ilikeValue}`,
+      )
+      .order("created_at", { ascending: false })
+      .limit(fetchLimit),
+    serviceClient
+      .from("repair_requests")
+      .select("customer_name, email, phone, created_at")
+      .or(
+        `customer_name.ilike.${ilikeValue},email.ilike.${ilikeValue},phone.ilike.${ilikeValue}`,
+      )
+      .order("created_at", { ascending: false })
+      .limit(fetchLimit),
+  ]);
+
+  for (const row of (profileResponse.data ?? []) as CustomerProfileLookupRow[]) {
+    mergeCustomerLookup(
+      merged,
+      {
+        key: row.id,
+        name: row.name ?? row.email ?? row.phone ?? "Unknown",
+        email: row.email,
+        phone: row.phone,
+        city: row.default_city,
+        address: row.default_address,
+        country: row.default_country,
+        lastActivityAt: row.updated_at,
+      },
+      normalizedQuery,
+      3,
+    );
+  }
+
+  for (const row of (orderResponse.data ?? []) as CustomerOrderLookupRow[]) {
+    mergeCustomerLookup(
+      merged,
+      {
+        key: "",
+        name: row.customer_name,
+        email: row.email,
+        phone: row.phone,
+        city: row.city,
+        address: row.address,
+        country: row.country,
+        lastActivityAt: row.created_at,
+      },
+      normalizedQuery,
+      2,
+    );
+  }
+
+  for (const row of (repairResponse.data ?? []) as CustomerRepairLookupRow[]) {
+    mergeCustomerLookup(
+      merged,
+      {
+        key: "",
+        name: row.customer_name,
+        email: row.email,
+        phone: row.phone,
+        city: null,
+        address: null,
+        country: null,
+        lastActivityAt: row.created_at,
+      },
+      normalizedQuery,
+      1,
+    );
+  }
+
+  return Array.from(merged.values())
+    .sort(
+      (a, b) =>
+        b.score - a.score ||
+        Date.parse(b.lastActivityAt) - Date.parse(a.lastActivityAt) ||
+        a.name.localeCompare(b.name),
+    )
+    .slice(0, cappedLimit)
+    .map(toCustomerLookupResult);
+}
+
 export async function listAdminOrders({
   search,
   status,
@@ -331,6 +690,27 @@ export async function updateAdminOrderStatus(
   if (historyError) {
     throw new Error(historyError.message);
   }
+
+  await syncOrderCashbookByOrderId(orderId);
+}
+
+export async function updateAdminOrderPaymentStatus(orderId: string, paymentStatus: PaymentStatus) {
+  const serviceClient = createSupabaseServiceClient();
+  if (!serviceClient) {
+    updateFallbackOrder(orderId, { paymentStatus });
+    return;
+  }
+
+  const { error: updateError } = await serviceClient
+    .from("orders")
+    .update({ payment_status: paymentStatus })
+    .eq("id", orderId);
+
+  if (updateError) {
+    throw new Error(updateError.message);
+  }
+
+  await syncOrderCashbookByOrderId(orderId);
 }
 
 export async function updateAdminOrderInternalNotes(orderId: string, notes: string) {
@@ -1024,6 +1404,96 @@ export async function uploadAdminProductPrimaryImage(input: {
   }
 }
 
+export async function uploadAdminProductGalleryImage(input: {
+  productId: string;
+  imageAlt?: string | null;
+  fileName: string;
+  fileType: string;
+  fileBytes: Uint8Array;
+}) {
+  const safeName = sanitizeFileName(input.fileName);
+  const fileType = input.fileType || "image/jpeg";
+  const serviceClient = createSupabaseServiceClient();
+
+  if (!fileType.startsWith("image/")) {
+    throw new Error("Only image files are allowed for product uploads.");
+  }
+
+  if (!serviceClient) {
+    const existing = getFallbackProducts().find(
+      (product) => product.id === input.productId,
+    );
+    if (!existing) {
+      throw new Error("Product not found.");
+    }
+    const maxSort = existing.images.reduce(
+      (max, img) => Math.max(max, img.sortOrder),
+      0,
+    );
+    const nextImage = {
+      id: `${existing.id}-img-${Date.now()}`,
+      productId: existing.id,
+      sortOrder: maxSort + 1,
+      url: `/uploads/products/${existing.id}/${safeName}`,
+      alt:
+        input.imageAlt?.trim() ||
+        `${existing.title} gallery image ${maxSort + 1}`,
+    };
+    upsertFallbackProduct({
+      ...existing,
+      updatedAt: nowIso(),
+      images: [...existing.images, nextImage],
+    });
+    return;
+  }
+
+  const path = `${input.productId}/${Date.now()}-${safeName}`;
+  const { error: uploadError } = await serviceClient.storage
+    .from("products")
+    .upload(path, input.fileBytes, {
+      contentType: fileType,
+      upsert: false,
+    });
+
+  if (uploadError) {
+    throw new Error(uploadError.message);
+  }
+
+  const { data } = serviceClient.storage.from("products").getPublicUrl(path);
+
+  const { data: maxRow } = await serviceClient
+    .from("product_images")
+    .select("sort_order")
+    .eq("product_id", input.productId)
+    .order("sort_order", { ascending: false })
+    .limit(1)
+    .single();
+
+  const nextSortOrder = (maxRow?.sort_order ?? 0) + 1;
+
+  const { data: existingProduct } = await serviceClient
+    .from("products")
+    .select("title")
+    .eq("id", input.productId)
+    .single();
+
+  const { error: imageError } = await serviceClient
+    .from("product_images")
+    .insert({
+      product_id: input.productId,
+      url: data.publicUrl,
+      alt:
+        input.imageAlt?.trim() ||
+        `${String(existingProduct?.title ?? "Product")} gallery image ${nextSortOrder}`,
+      sort_order: nextSortOrder,
+    });
+
+  if (imageError) {
+    await serviceClient.storage.from("products").remove([path]);
+    throw new Error(imageError.message);
+  }
+}
+
 export async function listAdminContacts({
   search,
 }: Pick<ListFilterParams, "search"> = {}): Promise<AdminContact[]> {
@@ -1383,6 +1853,51 @@ export async function updateAdminSiteSetting(key: string, value: string) {
   }
 }
 
+export async function uploadAdminSiteImage(input: {
+  settingKey: string;
+  fileName: string;
+  fileType: string;
+  fileBytes: Uint8Array;
+}) {
+  const safeName = sanitizeFileName(input.fileName);
+  const fileType = input.fileType || "image/jpeg";
+  const serviceClient = createSupabaseServiceClient();
+
+  if (!serviceClient) {
+    updateFallbackSiteSetting(
+      input.settingKey,
+      `/uploads/site/${input.settingKey}/${safeName}`,
+    );
+    return;
+  }
+
+  const path = `${input.settingKey}/${Date.now()}-${safeName}`;
+  const { error: uploadError } = await serviceClient.storage
+    .from("site")
+    .upload(path, input.fileBytes, {
+      contentType: fileType,
+      upsert: false,
+    });
+
+  if (uploadError) {
+    throw new Error(uploadError.message);
+  }
+
+  const { data } = serviceClient.storage.from("site").getPublicUrl(path);
+
+  const { error } = await serviceClient
+    .from("site_settings")
+    .upsert(
+      { key: input.settingKey, value: data.publicUrl },
+      { onConflict: "key" },
+    );
+
+  if (error) {
+    await serviceClient.storage.from("site").remove([path]);
+    throw new Error(error.message);
+  }
+}
+
 export async function listAdminCustomers({
   search,
 }: Pick<ListFilterParams, "search"> = {}): Promise<AdminCustomerRow[]> {
@@ -1534,4 +2049,251 @@ export async function getRecentDashboardData() {
     recentRepairs: repairs.slice(0, 5),
     recentContacts: contacts.slice(0, 5),
   };
+}
+
+type HeroSlideRow = {
+  id: string;
+  slide_type: HeroSlideType;
+  status: HeroSlideStatus;
+  sort_order: number;
+  headline: string | null;
+  subheadline: string | null;
+  cta_label: string | null;
+  cta_href: string | null;
+  secondary_cta_label: string | null;
+  secondary_cta_href: string | null;
+  background_image_url: string | null;
+  background_image_alt: string | null;
+  video_url: string | null;
+  video_poster_url: string | null;
+  product_id: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+function toAdminHeroSlide(row: HeroSlideRow): AdminHeroSlide {
+  return {
+    id: row.id,
+    slideType: row.slide_type,
+    status: row.status,
+    sortOrder: row.sort_order,
+    headline: row.headline,
+    subheadline: row.subheadline,
+    ctaLabel: row.cta_label,
+    ctaHref: row.cta_href,
+    secondaryCtaLabel: row.secondary_cta_label,
+    secondaryCtaHref: row.secondary_cta_href,
+    backgroundImageUrl: row.background_image_url,
+    backgroundImageAlt: row.background_image_alt,
+    videoUrl: row.video_url,
+    videoPosterUrl: row.video_poster_url,
+    productId: row.product_id,
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
+  };
+}
+
+export async function listAdminHeroSlides(): Promise<AdminHeroSlide[]> {
+  const serviceClient = createSupabaseServiceClient();
+
+  if (!serviceClient) {
+    return getFallbackHeroSlides();
+  }
+
+  const { data, error } = await serviceClient
+    .from("hero_slides")
+    .select("*")
+    .order("sort_order", { ascending: true });
+
+  if (error) {
+    // Table may not exist yet — fall back gracefully
+    return getFallbackHeroSlides();
+  }
+
+  return (data as HeroSlideRow[]).map(toAdminHeroSlide);
+}
+
+export async function listActiveHeroSlides(): Promise<AdminHeroSlide[]> {
+  const serviceClient = createSupabaseServiceClient();
+
+  if (!serviceClient) {
+    return getFallbackHeroSlides().filter((s) => s.status === "active");
+  }
+
+  const { data, error } = await serviceClient
+    .from("hero_slides")
+    .select("*")
+    .eq("status", "active")
+    .order("sort_order", { ascending: true });
+
+  if (error) {
+    // Table may not exist yet — fall back gracefully
+    return getFallbackHeroSlides().filter((s) => s.status === "active");
+  }
+
+  return (data as HeroSlideRow[]).map(toAdminHeroSlide);
+}
+
+export async function upsertAdminHeroSlide(input: {
+  id?: string;
+  slideType: HeroSlideType;
+  status: HeroSlideStatus;
+  sortOrder: number;
+  headline: string | null;
+  subheadline: string | null;
+  ctaLabel: string | null;
+  ctaHref: string | null;
+  secondaryCtaLabel: string | null;
+  secondaryCtaHref: string | null;
+  backgroundImageUrl: string | null;
+  backgroundImageAlt: string | null;
+  videoUrl: string | null;
+  videoPosterUrl: string | null;
+  productId: string | null;
+}) {
+  const serviceClient = createSupabaseServiceClient();
+
+  if (!serviceClient) {
+    const existing = input.id
+      ? getFallbackHeroSlides().find((s) => s.id === input.id)
+      : undefined;
+    const slideId = input.id ?? `hero-${Date.now()}`;
+    upsertFallbackHeroSlide({
+      id: slideId,
+      slideType: input.slideType,
+      status: input.status,
+      sortOrder: input.sortOrder,
+      headline: input.headline,
+      subheadline: input.subheadline,
+      ctaLabel: input.ctaLabel,
+      ctaHref: input.ctaHref,
+      secondaryCtaLabel: input.secondaryCtaLabel,
+      secondaryCtaHref: input.secondaryCtaHref,
+      backgroundImageUrl: input.backgroundImageUrl,
+      backgroundImageAlt: input.backgroundImageAlt,
+      videoUrl: input.videoUrl,
+      videoPosterUrl: input.videoPosterUrl,
+      productId: input.productId,
+      createdAt: existing?.createdAt ?? nowIso(),
+      updatedAt: nowIso(),
+    });
+    return slideId;
+  }
+
+  const row = {
+    slide_type: input.slideType,
+    status: input.status,
+    sort_order: input.sortOrder,
+    headline: input.headline,
+    subheadline: input.subheadline,
+    cta_label: input.ctaLabel,
+    cta_href: input.ctaHref,
+    secondary_cta_label: input.secondaryCtaLabel,
+    secondary_cta_href: input.secondaryCtaHref,
+    background_image_url: input.backgroundImageUrl,
+    background_image_alt: input.backgroundImageAlt,
+    video_url: input.videoUrl,
+    video_poster_url: input.videoPosterUrl,
+    product_id: input.productId,
+  };
+
+  if (input.id) {
+    const { error } = await serviceClient
+      .from("hero_slides")
+      .update(row)
+      .eq("id", input.id);
+
+    if (error) {
+      throw new Error(error.message);
+    }
+
+    return input.id;
+  }
+
+  const { data, error } = await serviceClient
+    .from("hero_slides")
+    .insert(row)
+    .select("id")
+    .single();
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  return data.id as string;
+}
+
+export async function deleteAdminHeroSlide(slideId: string) {
+  const serviceClient = createSupabaseServiceClient();
+
+  if (!serviceClient) {
+    deleteFallbackHeroSlide(slideId);
+    return;
+  }
+
+  const { error } = await serviceClient
+    .from("hero_slides")
+    .delete()
+    .eq("id", slideId);
+
+  if (error) {
+    throw new Error(error.message);
+  }
+}
+
+export async function uploadAdminHeroSlideImage(input: {
+  slideId: string;
+  imageField: "backgroundImage" | "videoPoster" | "video";
+  fileName: string;
+  fileType: string;
+  fileBytes: Uint8Array;
+}) {
+  const safeName = sanitizeFileName(input.fileName);
+  const fileType = input.fileType || "image/jpeg";
+  const serviceClient = createSupabaseServiceClient();
+  const columnMap: Record<string, string> = {
+    backgroundImage: "background_image_url",
+    videoPoster: "video_poster_url",
+    video: "video_url",
+  };
+  const column = columnMap[input.imageField];
+
+  if (!serviceClient) {
+    const url = `/uploads/hero-slides/${input.slideId}/${safeName}`;
+    const slide = getFallbackHeroSlides().find((s) => s.id === input.slideId);
+    if (slide) {
+      const updated = { ...slide, updatedAt: nowIso() };
+      if (input.imageField === "backgroundImage") {
+        updated.backgroundImageUrl = url;
+      } else if (input.imageField === "videoPoster") {
+        updated.videoPosterUrl = url;
+      } else {
+        updated.videoUrl = url;
+      }
+      upsertFallbackHeroSlide(updated);
+    }
+    return;
+  }
+
+  const path = `${input.slideId}/${Date.now()}-${safeName}`;
+  const { error: uploadError } = await serviceClient.storage
+    .from("hero-slides")
+    .upload(path, input.fileBytes, {
+      contentType: fileType,
+      upsert: false,
+    });
+
+  if (uploadError) {
+    throw new Error(uploadError.message);
+  }
+
+  const { data } = serviceClient.storage.from("hero-slides").getPublicUrl(path);
+  const { error } = await serviceClient
+    .from("hero_slides")
+    .update({ [column]: data.publicUrl })
+    .eq("id", input.slideId);
+
+  if (error) {
+    throw new Error(error.message);
+  }
 }

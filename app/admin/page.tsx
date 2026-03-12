@@ -113,13 +113,16 @@ export default async function AdminHomePage() {
       </section>
 
       <section className="surface-panel p-5">
-        <h2 className="text-2xl text-graphite">Extended Operations</h2>
-        <div className="mt-3 grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
+        <h2 className="text-2xl text-graphite">Task Modules</h2>
+        <div className="mt-3 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
           {[
-            { label: "Marketing", href: "/admin/marketing" },
-            { label: "Payments", href: "/admin/payments" },
+            { label: "Front Desk", href: "/admin/operations/front-desk" },
+            { label: "Workshop", href: "/admin/operations/workshop" },
+            { label: "Inventory", href: "/admin/operations/inventory" },
+            { label: "Watch DB", href: "/admin/operations/watch-db" },
+            { label: "Cashbook", href: "/admin/operations/cashbook" },
             { label: "Support", href: "/admin/support" },
-            { label: "Operations", href: "/admin/operations" },
+            { label: "Marketing", href: "/admin/marketing" },
             { label: "Growth", href: "/admin/growth" },
           ].map((item) => (
             <Link

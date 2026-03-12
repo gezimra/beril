@@ -160,6 +160,21 @@ export const stockMovementTypes = [
 ] as const;
 export type StockMovementType = (typeof stockMovementTypes)[number];
 
+export const inventoryItemTypes = [
+  "part",
+  "battery",
+  "strap",
+  "bracelet",
+  "crystal",
+  "tool",
+  "consumable",
+  "other",
+] as const;
+export type InventoryItemType = (typeof inventoryItemTypes)[number];
+
+export const cashEntryTypes = ["inflow", "outflow"] as const;
+export type CashEntryType = (typeof cashEntryTypes)[number];
+
 export const purchaseOrderStatuses = [
   "draft",
   "ordered",
@@ -191,6 +206,12 @@ export type AffiliateStatus = (typeof affiliateStatuses)[number];
 
 export const payoutStatuses = ["pending", "approved", "paid", "cancelled"] as const;
 export type PayoutStatus = (typeof payoutStatuses)[number];
+
+export const heroSlideTypes = ["content", "image", "video", "product_spotlight"] as const;
+export type HeroSlideType = (typeof heroSlideTypes)[number];
+
+export const heroSlideStatuses = ["draft", "active", "archived"] as const;
+export type HeroSlideStatus = (typeof heroSlideStatuses)[number];
 
 export interface Money {
   amount: number;

@@ -1,10 +1,13 @@
 import {
+  uploadProductGalleryImageAction,
   uploadProductPrimaryImageAction,
   upsertProductAction,
 } from "@/app/admin/actions";
 import { Container } from "@/components/layout/container";
+import { FloatInput, FloatSelect, FloatTextarea } from "@/components/ui/float-field";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { listAdminProducts } from "@/lib/db/admin";
+import { formatStatusLabel } from "@/lib/utils/status-label";
 import { stockStatuses } from "@/types/domain";
 
 type AdminProductsPageProps = {
@@ -43,97 +46,79 @@ export default async function AdminProductsPage({
         <p className="sm:col-span-2 text-xs uppercase tracking-[0.14em] text-graphite/62">
           Create product
         </p>
-        <input
+        <FloatInput
           name="title"
           required
-          placeholder="Title"
-          className="w-full rounded-lg border border-graphite/18 bg-white/85 px-3 py-2 text-sm"
+          label="Title"
         />
-        <input
+        <FloatInput
           name="brand"
           required
-          placeholder="Brand"
-          className="w-full rounded-lg border border-graphite/18 bg-white/85 px-3 py-2 text-sm"
+          label="Brand"
         />
-        <select
+        <FloatSelect
           name="category"
           defaultValue="watch"
-          className="rounded-lg border border-graphite/18 bg-white/85 px-3 py-2 text-sm"
+          label="Category"
         >
           <option value="watch">watch</option>
           <option value="eyewear">eyewear</option>
-        </select>
-        <input
+        </FloatSelect>
+        <FloatInput
           name="price"
           type="number"
           min="0"
           step="0.01"
           required
-          placeholder="Price EUR"
-          className="rounded-lg border border-graphite/18 bg-white/85 px-3 py-2 text-sm"
+          label="Price EUR"
         />
-        <select
+        <FloatSelect
           name="stockStatus"
           defaultValue="in_stock"
-          className="rounded-lg border border-graphite/18 bg-white/85 px-3 py-2 text-sm"
+          label="Stock Status"
         >
           {stockStatuses.map((item) => (
             <option key={item} value={item}>
-              {item}
+              {formatStatusLabel(item)}
             </option>
           ))}
-        </select>
-        <input
+        </FloatSelect>
+        <FloatInput
           name="quantity"
           type="number"
           min="0"
-          placeholder="Quantity"
-          className="rounded-lg border border-graphite/18 bg-white/85 px-3 py-2 text-sm"
+          label="Quantity"
         />
-        <input
-          name="primaryImageUrl"
-          type="url"
-          placeholder="Primary image URL"
-          className="sm:col-span-2 rounded-lg border border-graphite/18 bg-white/85 px-3 py-2 text-sm"
-        />
-        <input
+        <FloatInput
           name="primaryImageAlt"
-          placeholder="Primary image alt text"
-          className="sm:col-span-2 rounded-lg border border-graphite/18 bg-white/85 px-3 py-2 text-sm"
+          label="Primary image alt text"
+          wrapperClassName="sm:col-span-2"
         />
-        <textarea
-          name="imageUrlsRaw"
-          rows={4}
-          placeholder={
-            "Ordered image URLs (top = first gallery image)\nhttps://...\nhttps://..."
-          }
-          className="sm:col-span-2 rounded-lg border border-graphite/18 bg-white/85 px-3 py-2 font-mono text-xs"
-        />
-        <textarea
+        <FloatTextarea
           name="specsRaw"
           rows={4}
-          placeholder={"Specs (one per line)\nmovement: Automatic\ncase_size: 40mm"}
-          className="sm:col-span-2 rounded-lg border border-graphite/18 bg-white/85 px-3 py-2 font-mono text-xs"
+          label="Specs (one per line)"
+          wrapperClassName="sm:col-span-2"
         />
-        <select
+        <FloatSelect
           name="status"
           defaultValue="active"
-          className="rounded-lg border border-graphite/18 bg-white/85 px-3 py-2 text-sm"
+          label="Status"
         >
-          <option value="draft">draft</option>
-          <option value="active">active</option>
-          <option value="archived">archived</option>
-        </select>
-        <select
+          <option value="draft">Draft</option>
+          <option value="active">Active</option>
+          <option value="archived">Archived</option>
+        </FloatSelect>
+        <FloatSelect
           name="primaryCtaMode"
           defaultValue="add_to_cart"
-          className="rounded-lg border border-graphite/18 bg-white/85 px-3 py-2 text-sm"
+          label="Primary CTA Mode"
         >
-          <option value="add_to_cart">add_to_cart</option>
-          <option value="reserve_in_store">reserve_in_store</option>
-          <option value="whatsapp_inquiry">whatsapp_inquiry</option>
-          <option value="request_availability">request_availability</option>
-        </select>
+          <option value="add_to_cart">Add To Cart</option>
+          <option value="reserve_in_store">Reserve In Store</option>
+          <option value="whatsapp_inquiry">WhatsApp Inquiry</option>
+          <option value="request_availability">Request Availability</option>
+        </FloatSelect>
         <div className="flex items-center gap-4">
           <label className="flex items-center gap-2 text-sm text-graphite/74">
             <input type="checkbox" name="featured" />
@@ -153,22 +138,21 @@ export default async function AdminProductsPage({
       </form>
 
       <form method="get" className="surface-panel grid gap-3 p-4 sm:grid-cols-[1fr_13rem_auto]">
-        <input
+        <FloatInput
           name="search"
           defaultValue={search}
-          placeholder="Search by title, brand, slug"
-          className="w-full rounded-lg border border-graphite/18 bg-white/85 px-3 py-2 text-sm"
+          label="Search by title, brand, slug"
         />
-        <select
+        <FloatSelect
           name="status"
           defaultValue={status}
-          className="rounded-lg border border-graphite/18 bg-white/85 px-3 py-2 text-sm"
+          label="Status"
         >
           <option value="">All statuses</option>
-          <option value="draft">draft</option>
-          <option value="active">active</option>
-          <option value="archived">archived</option>
-        </select>
+          <option value="draft">Draft</option>
+          <option value="active">Active</option>
+          <option value="archived">Archived</option>
+        </FloatSelect>
         <button
           type="submit"
           className="inline-flex h-10 items-center justify-center rounded-full bg-mineral px-5 text-xs uppercase tracking-[0.12em] text-white"
@@ -187,97 +171,84 @@ export default async function AdminProductsPage({
             <article key={product.id} className="surface-panel p-4">
               <form action={upsertProductAction} className="grid gap-3 md:grid-cols-10">
                 <input type="hidden" name="id" value={product.id} />
-                <input
+                <FloatInput
                   name="title"
                   defaultValue={product.title}
-                  className="md:col-span-2 rounded-lg border border-graphite/18 bg-white/85 px-3 py-2 text-sm"
+                  label="Title"
+                  wrapperClassName="md:col-span-2"
                 />
-                <input
+                <FloatInput
                   name="brand"
                   defaultValue={product.brand}
-                  className="rounded-lg border border-graphite/18 bg-white/85 px-3 py-2 text-sm"
+                  label="Brand"
                 />
-                <select
+                <FloatSelect
                   name="category"
                   defaultValue={product.category}
-                  className="rounded-lg border border-graphite/18 bg-white/85 px-3 py-2 text-sm"
+                  label="Category"
                 >
                   <option value="watch">watch</option>
                   <option value="eyewear">eyewear</option>
-                </select>
-                <input
+                </FloatSelect>
+                <FloatInput
                   name="price"
                   type="number"
                   min="0"
                   step="0.01"
                   defaultValue={product.price}
-                  className="rounded-lg border border-graphite/18 bg-white/85 px-3 py-2 text-sm"
+                  label="Price"
                 />
-                <select
+                <FloatSelect
                   name="stockStatus"
                   defaultValue={product.stockStatus}
-                  className="rounded-lg border border-graphite/18 bg-white/85 px-3 py-2 text-sm"
+                  label="Stock Status"
                 >
                   {stockStatuses.map((item) => (
                     <option key={item} value={item}>
-                      {item}
+                      {formatStatusLabel(item)}
                     </option>
                   ))}
-                </select>
-                <input
+                </FloatSelect>
+                <FloatInput
                   name="quantity"
                   type="number"
                   min="0"
                   defaultValue={product.quantity ?? ""}
-                  className="rounded-lg border border-graphite/18 bg-white/85 px-3 py-2 text-sm"
+                  label="Quantity"
                 />
-                <select
+                <FloatSelect
                   name="status"
                   defaultValue={product.status}
-                  className="rounded-lg border border-graphite/18 bg-white/85 px-3 py-2 text-sm"
+                  label="Status"
                 >
-                  <option value="draft">draft</option>
-                  <option value="active">active</option>
-                  <option value="archived">archived</option>
-                </select>
-                <select
+                  <option value="draft">Draft</option>
+                  <option value="active">Active</option>
+                  <option value="archived">Archived</option>
+                </FloatSelect>
+                <FloatSelect
                   name="primaryCtaMode"
                   defaultValue={product.primaryCtaMode}
-                  className="rounded-lg border border-graphite/18 bg-white/85 px-3 py-2 text-sm"
+                  label="Primary CTA Mode"
                 >
-                  <option value="add_to_cart">add_to_cart</option>
-                  <option value="reserve_in_store">reserve_in_store</option>
-                  <option value="whatsapp_inquiry">whatsapp_inquiry</option>
-                  <option value="request_availability">request_availability</option>
-                </select>
-                <input
-                  name="primaryImageUrl"
-                  type="url"
-                  defaultValue={product.primaryImageUrl ?? ""}
-                  placeholder="Primary image URL"
-                  className="md:col-span-2 rounded-lg border border-graphite/18 bg-white/85 px-3 py-2 text-sm"
-                />
-                <input
+                  <option value="add_to_cart">Add To Cart</option>
+                  <option value="reserve_in_store">Reserve In Store</option>
+                  <option value="whatsapp_inquiry">WhatsApp Inquiry</option>
+                  <option value="request_availability">Request Availability</option>
+                </FloatSelect>
+                <FloatInput
                   name="primaryImageAlt"
                   defaultValue={product.primaryImageAlt ?? ""}
-                  placeholder="Primary image alt"
-                  className="md:col-span-2 rounded-lg border border-graphite/18 bg-white/85 px-3 py-2 text-sm"
+                  label="Primary image alt"
+                  wrapperClassName="md:col-span-2"
                 />
-                <textarea
-                  name="imageUrlsRaw"
-                  rows={3}
-                  defaultValue={product.imageUrls.join("\n")}
-                  placeholder="Ordered image URLs (top = first gallery image)"
-                  className="md:col-span-4 rounded-lg border border-graphite/18 bg-white/85 px-3 py-2 font-mono text-xs"
-                />
-                <textarea
+                <FloatTextarea
                   name="specsRaw"
                   rows={3}
                   defaultValue={product.specs
                     .map((spec) => `${spec.key}: ${spec.value}`)
                     .join("\n")}
-                  placeholder={"Specs (one per line)\nkey: value"}
-                  className="md:col-span-4 rounded-lg border border-graphite/18 bg-white/85 px-3 py-2 font-mono text-xs"
+                  label="Specs (one per line)"
+                  wrapperClassName="md:col-span-4"
                 />
                 <div className="md:col-span-2 flex items-center gap-4">
                   <label className="flex items-center gap-2 text-sm text-graphite/74">
@@ -302,11 +273,10 @@ export default async function AdminProductsPage({
                 className="mt-3 grid gap-2 rounded-lg border border-graphite/12 bg-white/70 p-3 md:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto]"
               >
                 <input type="hidden" name="productId" value={product.id} />
-                <input
+                <FloatInput
                   name="imageAlt"
                   defaultValue={product.primaryImageAlt ?? `${product.title} product image`}
-                  placeholder="Primary image alt text"
-                  className="rounded-lg border border-graphite/18 bg-white/85 px-3 py-2 text-sm"
+                  label="Primary image alt text"
                 />
                 <input
                   type="file"
@@ -330,6 +300,46 @@ export default async function AdminProductsPage({
                   >
                     Current image
                   </a>
+                ) : null}
+              </form>
+
+              <form
+                action={uploadProductGalleryImageAction}
+                className="mt-2 grid gap-2 rounded-lg border border-graphite/12 bg-white/70 p-3 md:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto]"
+              >
+                <input type="hidden" name="productId" value={product.id} />
+                <FloatInput
+                  name="imageAlt"
+                  defaultValue={`${product.title} gallery image`}
+                  label="Gallery image alt text"
+                />
+                <input
+                  type="file"
+                  name="galleryImageFile"
+                  accept="image/*"
+                  required
+                  className="rounded-lg border border-graphite/18 bg-white/85 px-3 py-2 text-xs"
+                />
+                <button
+                  type="submit"
+                  className="inline-flex h-10 items-center justify-center rounded-full border border-graphite/18 bg-white/85 px-4 text-xs uppercase tracking-[0.12em] text-graphite"
+                >
+                  Add Gallery Image
+                </button>
+                {product.imageUrls.length > 0 ? (
+                  <div className="md:col-span-3 flex flex-wrap gap-2">
+                    {product.imageUrls.map((url, index) => (
+                      <a
+                        key={url}
+                        href={url}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="text-xs text-graphite/72 underline"
+                      >
+                        Image {index + 1}
+                      </a>
+                    ))}
+                  </div>
                 ) : null}
               </form>
             </article>

@@ -1,12 +1,14 @@
 import Link from "next/link";
 
 import { Container } from "@/components/layout/container";
-import { getMessages } from "@/lib/i18n";
-import { legalNavItems, mainNavItems } from "@/lib/navigation";
+import { getServerLocale, getServerMessages } from "@/lib/i18n/server";
+import { getLegalNavItems, getMainNavItems } from "@/lib/navigation";
 import { siteConfig } from "@/lib/site";
 
-export function Footer() {
-  const messages = getMessages();
+export async function Footer() {
+  const [messages, locale] = await Promise.all([getServerMessages(), getServerLocale()]);
+  const mainNavItems = getMainNavItems(locale);
+  const legalNavItems = getLegalNavItems(locale);
 
   return (
     <footer className="border-t border-graphite/10 bg-stone/42">

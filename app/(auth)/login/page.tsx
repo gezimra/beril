@@ -1,6 +1,7 @@
 import Link from "next/link";
 
 import { loginAction } from "@/app/(auth)/actions";
+import { FloatInput } from "@/components/ui/float-field";
 
 export const metadata = {
   title: "Admin Login",
@@ -67,34 +68,22 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
 
       <form action={loginAction} className="space-y-4" aria-label="Admin login form">
         <input type="hidden" name="next" value={nextPath} />
-        <div className="space-y-1">
-          <label htmlFor="email" className="text-sm font-medium text-graphite">
-            Email
-          </label>
-          <input
-            id="email"
-            name="email"
-            type="email"
-            placeholder="owner@beril.store"
-            required
-            autoComplete="email"
-            className="w-full rounded-xl border border-graphite/20 bg-white/80 px-4 py-3 text-sm"
-          />
-        </div>
-        <div className="space-y-1">
-          <label htmlFor="password" className="text-sm font-medium text-graphite">
-            Password
-          </label>
-          <input
-            id="password"
-            name="password"
-            type="password"
-            placeholder="********"
-            required
-            autoComplete="current-password"
-            className="w-full rounded-xl border border-graphite/20 bg-white/80 px-4 py-3 text-sm"
-          />
-        </div>
+        <FloatInput
+          label="Email"
+          id="email"
+          name="email"
+          type="email"
+          required
+          autoComplete="email"
+        />
+        <FloatInput
+          label="Password"
+          id="password"
+          name="password"
+          type="password"
+          required
+          autoComplete="current-password"
+        />
         <button
           type="submit"
           className="inline-flex h-11 items-center rounded-full bg-walnut px-5 text-sm font-medium text-white"

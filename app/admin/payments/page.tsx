@@ -1,7 +1,9 @@
 import { updatePaymentTransactionStatusAction } from "@/app/admin/actions";
 import { Container } from "@/components/layout/container";
+import { FloatInput, FloatSelect } from "@/components/ui/float-field";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { listAdminPaymentTransactions } from "@/lib/db/payments-promotions";
+import { formatStatusLabel } from "@/lib/utils/status-label";
 import { paymentTransactionStatuses } from "@/types/domain";
 
 type AdminPaymentsPageProps = {
@@ -34,24 +36,23 @@ export default async function AdminPaymentsPage({
       </header>
 
       <form method="get" className="surface-panel grid gap-3 p-4 sm:grid-cols-[1fr_14rem_auto]">
-        <input
+        <FloatInput
+          label="Search"
           name="search"
           defaultValue={search}
-          placeholder="Search order id / provider reference"
-          className="w-full rounded-lg border border-graphite/18 bg-white/85 px-3 py-2 text-sm"
         />
-        <select
+        <FloatSelect
+          label="Status"
           name="status"
           defaultValue={status}
-          className="rounded-lg border border-graphite/18 bg-white/85 px-3 py-2 text-sm"
         >
           <option value="">All statuses</option>
           {paymentTransactionStatuses.map((item) => (
             <option key={item} value={item}>
-              {item}
+              {formatStatusLabel(item)}
             </option>
           ))}
-        </select>
+        </FloatSelect>
         <button
           type="submit"
           className="inline-flex h-10 items-center justify-center rounded-full bg-walnut px-5 text-xs uppercase tracking-[0.12em] text-white"
@@ -84,7 +85,7 @@ export default async function AdminPaymentsPage({
                     Reference: {transaction.providerReference ?? "-"}
                   </p>
                 </div>
-                <StatusBadge tone="premium">{transaction.status}</StatusBadge>
+                <StatusBadge tone="premium">{formatStatusLabel(transaction.status)}</StatusBadge>
               </div>
 
               <form
@@ -92,21 +93,20 @@ export default async function AdminPaymentsPage({
                 className="mt-3 grid gap-2 sm:grid-cols-[14rem_1fr_auto]"
               >
                 <input type="hidden" name="transactionId" value={transaction.id} />
-                <select
+                <FloatSelect
+                  label="Status"
                   name="status"
                   defaultValue={transaction.status}
-                  className="rounded-lg border border-graphite/18 bg-white/85 px-3 py-2 text-sm"
                 >
                   {paymentTransactionStatuses.map((item) => (
                     <option key={item} value={item}>
-                      {item}
+                      {formatStatusLabel(item)}
                     </option>
                   ))}
-                </select>
-                <input
+                </FloatSelect>
+                <FloatInput
+                  label="Note"
                   name="note"
-                  placeholder="Optional note"
-                  className="rounded-lg border border-graphite/18 bg-white/85 px-3 py-2 text-sm"
                 />
                 <button
                   type="submit"
@@ -122,4 +122,3 @@ export default async function AdminPaymentsPage({
     </Container>
   );
 }
-

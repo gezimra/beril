@@ -2,6 +2,7 @@ import { mockProducts, mockSiteSettings } from "@/lib/db/mock-data";
 import { normalizeEmail, normalizePhone } from "@/lib/utils/codes";
 import type {
   AdminContact,
+  AdminHeroSlide,
   AdminJournalPost,
   AdminOrder,
   AdminRepair,
@@ -214,6 +215,29 @@ export function upsertFallbackProduct(product: Product) {
   }
 
   fallbackProducts[index] = product;
+}
+
+const fallbackHeroSlides: AdminHeroSlide[] = [];
+
+export function getFallbackHeroSlides() {
+  return fallbackHeroSlides;
+}
+
+export function upsertFallbackHeroSlide(slide: AdminHeroSlide) {
+  const index = fallbackHeroSlides.findIndex((item) => item.id === slide.id);
+  if (index === -1) {
+    fallbackHeroSlides.push(slide);
+  } else {
+    fallbackHeroSlides[index] = slide;
+  }
+  fallbackHeroSlides.sort((a, b) => a.sortOrder - b.sortOrder);
+}
+
+export function deleteFallbackHeroSlide(slideId: string) {
+  const index = fallbackHeroSlides.findIndex((item) => item.id === slideId);
+  if (index !== -1) {
+    fallbackHeroSlides.splice(index, 1);
+  }
 }
 
 export function getFallbackCustomerKey(email?: string | null, phone?: string | null) {

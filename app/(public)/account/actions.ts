@@ -8,6 +8,7 @@ import {
   logoutCustomerAccount,
   registerCustomerAccount,
 } from "@/lib/db/customer-account";
+import { optionalPhoneInputSchema } from "@/lib/validations/phone";
 
 const loginSchema = z.object({
   email: z.string().trim().email(),
@@ -18,7 +19,7 @@ const loginSchema = z.object({
 const registerSchema = z.object({
   fullName: z.string().trim().min(2),
   email: z.string().trim().email(),
-  phone: z.string().trim().optional(),
+  phone: optionalPhoneInputSchema,
   password: z.string().min(8),
 });
 

@@ -4,6 +4,7 @@ import {
   upsertLoyaltyRuleAction,
 } from "@/app/admin/actions";
 import { Container } from "@/components/layout/container";
+import { FloatInput, FloatSelect, FloatTextarea } from "@/components/ui/float-field";
 import { StatusBadge } from "@/components/ui/status-badge";
 import {
   listAdminAffiliatePayouts,
@@ -11,6 +12,7 @@ import {
   listAdminLoyaltyAccounts,
   listAdminLoyaltyRules,
 } from "@/lib/db/growth-loyalty";
+import { formatStatusLabel } from "@/lib/utils/status-label";
 import { affiliateStatuses, payoutStatuses, rewardTypes } from "@/types/domain";
 
 type AdminGrowthPageProps = {
@@ -49,24 +51,23 @@ export default async function AdminGrowthPage({
       </header>
 
       <form method="get" className="surface-panel grid gap-3 p-4 sm:grid-cols-[1fr_14rem_auto]">
-        <input
+        <FloatInput
           name="search"
           defaultValue={search}
-          placeholder="Search affiliate or account"
-          className="w-full rounded-lg border border-graphite/18 bg-white/85 px-3 py-2 text-sm"
+          label="Search affiliate or account"
         />
-        <select
+        <FloatSelect
           name="status"
           defaultValue={status}
-          className="rounded-lg border border-graphite/18 bg-white/85 px-3 py-2 text-sm"
+          label="All statuses"
         >
           <option value="">All statuses</option>
           {Array.from(new Set([...affiliateStatuses, ...payoutStatuses])).map((item) => (
             <option key={item} value={item}>
-              {item}
+              {formatStatusLabel(item)}
             </option>
           ))}
-        </select>
+        </FloatSelect>
         <button
           type="submit"
           className="inline-flex h-10 items-center justify-center rounded-full bg-walnut px-5 text-xs uppercase tracking-[0.12em] text-white"
@@ -79,39 +80,38 @@ export default async function AdminGrowthPage({
         <article className="surface-panel p-4">
           <h2 className="text-2xl text-graphite">Loyalty Rules</h2>
           <form action={upsertLoyaltyRuleAction} className="mt-3 space-y-2 rounded-lg border border-graphite/12 bg-white/70 p-3">
-            <input
+            <FloatInput
               name="name"
               required
-              placeholder="Rule name"
-              className="w-full rounded-lg border border-graphite/18 bg-white/85 px-3 py-2 text-sm"
+              label="Rule name"
             />
             <div className="grid gap-2 sm:grid-cols-3">
-              <input
+              <FloatInput
                 name="pointsPerEur"
                 type="number"
                 min="0"
                 step="0.01"
                 defaultValue={1}
-                className="rounded-lg border border-graphite/18 bg-white/85 px-3 py-2 text-sm"
+                label="Points per EUR"
               />
-              <input
+              <FloatInput
                 name="minRedeemPoints"
                 type="number"
                 min="0"
                 defaultValue={100}
-                className="rounded-lg border border-graphite/18 bg-white/85 px-3 py-2 text-sm"
+                label="Min redeem points"
               />
-              <select
+              <FloatSelect
                 name="rewardType"
                 defaultValue="points"
-                className="rounded-lg border border-graphite/18 bg-white/85 px-3 py-2 text-sm"
+                label="Reward type"
               >
                 {rewardTypes.map((item) => (
                   <option key={item} value={item}>
-                    {item}
+                    {formatStatusLabel(item)}
                   </option>
                 ))}
-              </select>
+              </FloatSelect>
             </div>
             <label className="flex items-center gap-2 text-sm text-graphite/74">
               <input type="checkbox" name="active" defaultChecked />
@@ -133,7 +133,8 @@ export default async function AdminGrowthPage({
                 <li key={rule.id} className="rounded-lg border border-graphite/10 bg-white/75 px-3 py-2">
                   <p className="font-medium text-graphite">{rule.name}</p>
                   <p className="text-xs text-graphite/62">
-                    {rule.pointsPerEur} pts/EUR | min {rule.minRedeemPoints} | {rule.rewardType}
+                    {rule.pointsPerEur} pts/EUR | min {rule.minRedeemPoints} |{" "}
+                    {formatStatusLabel(rule.rewardType)}
                   </p>
                 </li>
               ))
@@ -164,51 +165,47 @@ export default async function AdminGrowthPage({
         <article className="surface-panel p-4">
           <h2 className="text-2xl text-graphite">Affiliates</h2>
           <form action={upsertAffiliateAction} className="mt-3 space-y-2 rounded-lg border border-graphite/12 bg-white/70 p-3">
-            <input
+            <FloatInput
               name="name"
               required
-              placeholder="Affiliate name"
-              className="w-full rounded-lg border border-graphite/18 bg-white/85 px-3 py-2 text-sm"
+              label="Affiliate name"
             />
-            <input
+            <FloatInput
               name="email"
               type="email"
-              placeholder="Affiliate email"
-              className="w-full rounded-lg border border-graphite/18 bg-white/85 px-3 py-2 text-sm"
+              label="Affiliate email"
             />
             <div className="grid gap-2 sm:grid-cols-3">
-              <input
+              <FloatInput
                 name="code"
                 required
-                placeholder="BERIL-A1"
-                className="rounded-lg border border-graphite/18 bg-white/85 px-3 py-2 text-sm uppercase"
+                label="BERIL-A1"
               />
-              <select
+              <FloatSelect
                 name="status"
                 defaultValue="pending"
-                className="rounded-lg border border-graphite/18 bg-white/85 px-3 py-2 text-sm"
+                label="Status"
               >
                 {affiliateStatuses.map((item) => (
                   <option key={item} value={item}>
-                    {item}
+                    {formatStatusLabel(item)}
                   </option>
                 ))}
-              </select>
-              <input
+              </FloatSelect>
+              <FloatInput
                 name="commissionRate"
                 type="number"
                 min="0"
                 max="1"
                 step="0.0001"
                 defaultValue={0.05}
-                className="rounded-lg border border-graphite/18 bg-white/85 px-3 py-2 text-sm"
+                label="Commission rate"
               />
             </div>
-            <textarea
+            <FloatTextarea
               name="notes"
               rows={2}
-              placeholder="Notes"
-              className="w-full rounded-lg border border-graphite/18 bg-white/85 px-3 py-2 text-sm"
+              label="Notes"
             />
             <button
               type="submit"
@@ -226,7 +223,7 @@ export default async function AdminGrowthPage({
                 <li key={affiliate.id} className="rounded-lg border border-graphite/10 bg-white/75 px-3 py-2">
                   <p className="font-medium text-graphite">{affiliate.name}</p>
                   <p className="text-xs text-graphite/62">
-                    {affiliate.code} | {affiliate.status} | {(affiliate.commissionRate * 100).toFixed(2)}%
+                    {affiliate.code} | {formatStatusLabel(affiliate.status)} | {(affiliate.commissionRate * 100).toFixed(2)}%
                   </p>
                 </li>
               ))
@@ -237,11 +234,11 @@ export default async function AdminGrowthPage({
         <article className="surface-panel p-4">
           <h2 className="text-2xl text-graphite">Affiliate Payouts</h2>
           <form action={upsertAffiliatePayoutAction} className="mt-3 space-y-2 rounded-lg border border-graphite/12 bg-white/70 p-3">
-            <select
+            <FloatSelect
               name="affiliateId"
               required
               defaultValue=""
-              className="w-full rounded-lg border border-graphite/18 bg-white/85 px-3 py-2 text-sm"
+              label="Select affiliate"
             >
               <option value="">Select affiliate</option>
               {affiliates.map((affiliate) => (
@@ -249,50 +246,48 @@ export default async function AdminGrowthPage({
                   {affiliate.name} ({affiliate.code})
                 </option>
               ))}
-            </select>
+            </FloatSelect>
             <div className="grid gap-2 sm:grid-cols-2">
-              <input
+              <FloatInput
                 name="periodStart"
                 type="date"
-                className="rounded-lg border border-graphite/18 bg-white/85 px-3 py-2 text-sm"
+                label="Period start"
               />
-              <input
+              <FloatInput
                 name="periodEnd"
                 type="date"
-                className="rounded-lg border border-graphite/18 bg-white/85 px-3 py-2 text-sm"
+                label="Period end"
               />
             </div>
             <div className="grid gap-2 sm:grid-cols-3">
-              <input
+              <FloatInput
                 name="amount"
                 type="number"
                 min="0"
                 step="0.01"
                 required
-                placeholder="Amount EUR"
-                className="rounded-lg border border-graphite/18 bg-white/85 px-3 py-2 text-sm"
+                label="Amount EUR"
               />
-              <select
+              <FloatSelect
                 name="status"
                 defaultValue="pending"
-                className="rounded-lg border border-graphite/18 bg-white/85 px-3 py-2 text-sm"
+                label="Status"
               >
                 {payoutStatuses.map((item) => (
                   <option key={item} value={item}>
-                    {item}
+                    {formatStatusLabel(item)}
                   </option>
                 ))}
-              </select>
-              <input
+              </FloatSelect>
+              <FloatInput
                 name="paidAt"
                 type="datetime-local"
-                className="rounded-lg border border-graphite/18 bg-white/85 px-3 py-2 text-sm"
+                label="Paid at"
               />
             </div>
-            <input
+            <FloatInput
               name="reference"
-              placeholder="Bank transfer ref"
-              className="w-full rounded-lg border border-graphite/18 bg-white/85 px-3 py-2 text-sm"
+              label="Bank transfer ref"
             />
             <button
               type="submit"
@@ -310,7 +305,7 @@ export default async function AdminGrowthPage({
                 <li key={payout.id} className="rounded-lg border border-graphite/10 bg-white/75 px-3 py-2">
                   <p className="font-medium text-graphite">{payout.affiliateId}</p>
                   <p className="text-xs text-graphite/62">
-                    {payout.amount} EUR | {payout.status}
+                    {payout.amount} EUR | {formatStatusLabel(payout.status)}
                   </p>
                 </li>
               ))
@@ -321,4 +316,3 @@ export default async function AdminGrowthPage({
     </Container>
   );
 }
-

@@ -4,6 +4,10 @@ import type {
   CampaignStatus,
   CouponStatus,
   DeliveryMethod,
+  CashEntryType,
+  HeroSlideStatus,
+  HeroSlideType,
+  InventoryItemType,
   JournalStatus,
   NotificationChannel,
   NotificationStatus,
@@ -169,6 +173,17 @@ export interface AdminCustomerRow {
   lastActivityAt: string;
 }
 
+export interface AdminCustomerLookup {
+  key: string;
+  name: string;
+  email: string | null;
+  phone: string | null;
+  city: string | null;
+  address: string | null;
+  country: string | null;
+  lastActivityAt: string;
+}
+
 export interface AdminCampaign {
   id: string;
   name: string;
@@ -303,12 +318,123 @@ export interface AdminPurchaseOrder {
 export interface AdminStockMovement {
   id: string;
   productId: string | null;
+  inventoryItemId: string | null;
   movementType: StockMovementType;
   quantityDelta: number;
   unitCost: number | null;
   referenceType: string | null;
   referenceId: string | null;
   note: string | null;
+  createdAt: string;
+}
+
+export interface AdminInventoryItem {
+  id: string;
+  sku: string;
+  name: string;
+  itemType: InventoryItemType;
+  brand: string | null;
+  model: string | null;
+  caliber: string | null;
+  quantityOnHand: number;
+  reorderLevel: number;
+  unitCost: number | null;
+  unitPrice: number | null;
+  location: string | null;
+  notes: string | null;
+  active: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface AdminCashbookEntry {
+  id: string;
+  entryDate: string;
+  entryType: CashEntryType;
+  amount: number;
+  category: string;
+  paymentMethod: PaymentMethod;
+  note: string | null;
+  referenceType: string | null;
+  referenceId: string | null;
+  createdBy: string | null;
+  createdAt: string;
+}
+
+export interface AdminWatchBrand {
+  id: string;
+  name: string;
+  country: string | null;
+  website: string | null;
+  notes: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface AdminWatchCaliber {
+  id: string;
+  brandId: string | null;
+  caliberName: string;
+  movementType: string;
+  powerReserveHours: number | null;
+  frequencyBph: number | null;
+  jewels: number | null;
+  diameterMm: number | null;
+  heightMm: number | null;
+  hasHacking: boolean;
+  hasHandWinding: boolean;
+  notes: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface AdminWatchModel {
+  id: string;
+  brandId: string | null;
+  modelName: string;
+  collection: string | null;
+  targetGender: string | null;
+  notes: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface AdminWatchReference {
+  id: string;
+  modelId: string;
+  referenceCode: string;
+  caliberId: string | null;
+  caseSizeMm: number | null;
+  lugWidthMm: number | null;
+  waterResistanceM: number | null;
+  crystal: string | null;
+  caseMaterial: string | null;
+  dialColor: string | null;
+  strapType: string | null;
+  productionFromYear: number | null;
+  productionToYear: number | null;
+  notes: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface AdminInventoryCompatibility {
+  id: string;
+  inventoryItemId: string;
+  caliberId: string | null;
+  modelId: string | null;
+  referenceId: string | null;
+  notes: string | null;
+  createdAt: string;
+}
+
+export interface AdminRepairPartUsage {
+  id: string;
+  workOrderId: string;
+  inventoryItemId: string | null;
+  partName: string;
+  quantity: number;
+  unitCost: number;
   createdAt: string;
 }
 
@@ -374,6 +500,26 @@ export interface AdminAffiliatePayout {
   status: PayoutStatus;
   paidAt: string | null;
   reference: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface AdminHeroSlide {
+  id: string;
+  slideType: HeroSlideType;
+  status: HeroSlideStatus;
+  sortOrder: number;
+  headline: string | null;
+  subheadline: string | null;
+  ctaLabel: string | null;
+  ctaHref: string | null;
+  secondaryCtaLabel: string | null;
+  secondaryCtaHref: string | null;
+  backgroundImageUrl: string | null;
+  backgroundImageAlt: string | null;
+  videoUrl: string | null;
+  videoPosterUrl: string | null;
+  productId: string | null;
   createdAt: string;
   updatedAt: string;
 }

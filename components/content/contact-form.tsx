@@ -2,19 +2,26 @@
 
 import { zodResolver } from "@hookform/resolvers/zod";
 import { startTransition, useState } from "react";
-import { useForm } from "react-hook-form";
+import { Controller, useForm } from "react-hook-form";
 
-import { getMessages } from "@/lib/i18n";
+import { FloatInput, FloatTextarea } from "@/components/ui/float-field";
+import { PhoneInput } from "@/components/ui/phone-input";
+import { getMessages, type Locale } from "@/lib/i18n";
 import { contactSchema, type ContactInput } from "@/lib/validations/contact";
 
-export function ContactForm() {
+interface ContactFormProps {
+  locale?: Locale;
+}
+
+export function ContactForm({ locale }: ContactFormProps = {}) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [status, setStatus] = useState<"idle" | "success" | "error">("idle");
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const messages = getMessages();
+  const messages = getMessages(locale);
 
   const {
     register,
+    control,
     handleSubmit,
     reset,
     formState: { errors },
@@ -63,82 +70,54 @@ export function ContactForm() {
   return (
     <form onSubmit={onSubmit} className="space-y-5">
       <div className="grid gap-4 sm:grid-cols-2">
-        <div className="space-y-1">
-          <label htmlFor="name" className="label-muted">
-            {messages.contact.form.name}
-          </label>
-          <input
-            id="name"
-            {...register("name")}
-            className="input-premium"
-          />
-          {errors.name ? (
-            <p className="text-xs text-walnut">{errors.name.message}</p>
-          ) : null}
-        </div>
-        <div className="space-y-1">
-          <label htmlFor="phone" className="label-muted">
-            {messages.contact.form.phone}
-          </label>
-          <input
-            id="phone"
-            type="tel"
-            inputMode="tel"
-            autoComplete="tel"
-            {...register("phone")}
-            className="input-premium"
-          />
-          {errors.phone ? (
-            <p className="text-xs text-walnut">{errors.phone.message}</p>
-          ) : null}
-        </div>
+        <FloatInput
+          label={messages.contact.form.name}
+          id="name"
+          {...register("name")}
+          error={errors.name?.message}
+        />
+        <Controller
+          name="phone"
+          control={control}
+          render={({ field }) => (
+            <PhoneInput
+              id="phone"
+              label={messages.contact.form.phone}
+              required
+              value={field.value}
+              onChange={field.onChange}
+              onBlur={field.onBlur}
+              autoComplete="tel"
+              error={errors.phone?.message}
+            />
+          )}
+        />
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2">
-        <div className="space-y-1">
-          <label htmlFor="email" className="label-muted">
-            {messages.contact.form.email}
-          </label>
-          <input
-            id="email"
-            type="email"
-            autoComplete="email"
-            {...register("email")}
-            className="input-premium"
-          />
-          {errors.email ? (
-            <p className="text-xs text-walnut">{errors.email.message}</p>
-          ) : null}
-        </div>
-        <div className="space-y-1">
-          <label htmlFor="subject" className="label-muted">
-            {messages.contact.form.subject}
-          </label>
-          <input
-            id="subject"
-            {...register("subject")}
-            className="input-premium"
-          />
-          {errors.subject ? (
-            <p className="text-xs text-walnut">{errors.subject.message}</p>
-          ) : null}
-        </div>
+        <FloatInput
+          label={messages.contact.form.email}
+          id="email"
+          type="email"
+          autoComplete="email"
+          {...register("email")}
+          error={errors.email?.message}
+        />
+        <FloatInput
+          label={messages.contact.form.subject}
+          id="subject"
+          {...register("subject")}
+          error={errors.subject?.message}
+        />
       </div>
 
-      <div className="space-y-1">
-        <label htmlFor="message" className="label-muted">
-          {messages.contact.form.message}
-        </label>
-        <textarea
-          id="message"
-          rows={6}
-          {...register("message")}
-          className="textarea-premium min-h-36"
-        />
-        {errors.message ? (
-          <p className="text-xs text-walnut">{errors.message.message}</p>
-        ) : null}
-      </div>
+      <FloatTextarea
+        label={messages.contact.form.message}
+        id="message"
+        rows={6}
+        {...register("message")}
+        error={errors.message?.message}
+      />
 
       {status === "success" ? (
         <p className="rounded-lg border border-mineral/30 bg-mineral/10 px-3 py-2 text-sm text-mineral">

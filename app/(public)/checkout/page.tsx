@@ -4,11 +4,13 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import Link from "next/link";
 import { startTransition, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { useForm } from "react-hook-form";
+import { Controller, useForm } from "react-hook-form";
 
 import { useCart } from "@/components/commerce/cart-provider";
 import { Container } from "@/components/layout/container";
 import { SectionWrapper } from "@/components/layout/section-wrapper";
+import { FloatInput, FloatSelect, FloatTextarea } from "@/components/ui/float-field";
+import { PhoneInput } from "@/components/ui/phone-input";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { trackEvent } from "@/lib/analytics/track";
 import { formatEur } from "@/lib/utils/money";
@@ -48,6 +50,7 @@ export default function CheckoutPage() {
 
   const {
     register,
+    control,
     handleSubmit,
     watch,
     setValue,
@@ -267,7 +270,7 @@ export default function CheckoutPage() {
 
   const onSubmit = handleSubmit(async (values) => {
     if (items.length === 0) {
-      setServerError("Your cart is empty.");
+      setServerError("Shporta juaj eshte bosh.");
       return;
     }
 
@@ -319,7 +322,7 @@ export default function CheckoutPage() {
       };
 
       if (!response.ok || !payload.ok || !payload.order) {
-        throw new Error(payload.message ?? "Unable to place order.");
+        throw new Error(payload.message ?? "Nuk u arrit te kryhet porosia.");
       }
 
       trackEvent("place_order", {
@@ -357,7 +360,7 @@ export default function CheckoutPage() {
         router.push(`/order-success?${params.toString()}`);
       });
     } catch (error) {
-      setServerError(error instanceof Error ? error.message : "Checkout failed.");
+      setServerError(error instanceof Error ? error.message : "Procesi i porosise deshtoi.");
       setIsSubmitting(false);
     }
   });
@@ -369,13 +372,13 @@ export default function CheckoutPage() {
           <div className="surface-panel p-8">
             <h1 className="text-4xl text-graphite">Checkout</h1>
             <p className="mt-3 text-sm text-graphite/74">
-              Add products to your cart before checkout.
+              Shto produkte ne shporte para se te vazhdosh me porosine.
             </p>
             <Link
               href="/cart"
               className="mt-5 inline-flex h-11 items-center rounded-full bg-walnut px-5 text-sm font-medium text-white"
             >
-              Go to Cart
+              Shko te Shporta
             </Link>
           </div>
         </Container>
@@ -387,17 +390,17 @@ export default function CheckoutPage() {
     <SectionWrapper className="py-16">
       <Container className="grid gap-7 xl:grid-cols-[minmax(0,1fr)_22rem]">
         <section className="surface-panel p-6 sm:p-7">
-          <StatusBadge tone="premium">Checkout</StatusBadge>
-          <h1 className="mt-4 text-5xl text-graphite">Complete Your Order</h1>
+          <StatusBadge tone="premium">Porosia</StatusBadge>
+          <h1 className="mt-4 text-5xl text-graphite">Perfundo Porosine</h1>
           <p className="mt-3 text-sm text-graphite/74">
-            Payment can be completed on delivery, in store, or online for card orders.
+            Pagesa mund te kryhet ne dorezim, ne dyqan, ose online per porosite me karte.
           </p>
 
           {isSignedInCustomer ? (
             <div className="mt-4 rounded-xl border border-mineral/28 bg-mineral/8 p-3 text-sm text-graphite/78">
               <p>
-                Signed in{accountEmail ? ` as ${accountEmail}` : ""}. Checkout details
-                are prefilled from your account.
+                I kycur{accountEmail ? ` si ${accountEmail}` : ""}. Detajet e porosise
+                jane plotesuar nga llogaria juaj.
               </p>
               <label className="mt-2 inline-flex items-center gap-2 text-xs uppercase tracking-[0.12em] text-graphite/68">
                 <input
@@ -406,131 +409,88 @@ export default function CheckoutPage() {
                   onChange={(event) => setSaveToAccount(event.target.checked)}
                   className="h-4 w-4 rounded border border-graphite/25"
                 />
-                Save any edits to my account for next orders
+                Ruaj ndryshimet ne llogarine time per porosite e ardhshme
               </label>
             </div>
           ) : null}
 
           <form onSubmit={onSubmit} className="mt-6 space-y-5">
             <div className="grid gap-4 sm:grid-cols-2">
-              <div className="space-y-1">
-                <label htmlFor="customerName" className="text-sm font-medium">
-                  Full name
-                </label>
-                <input
-                  id="customerName"
-                  {...register("customerName")}
-                  className="w-full rounded-lg border border-graphite/18 bg-white/85 px-3 py-2 text-sm"
-                />
-                {errors.customerName ? (
-                  <p className="text-xs text-walnut">{errors.customerName.message}</p>
-                ) : null}
-              </div>
-              <div className="space-y-1">
-                <label htmlFor="phone" className="text-sm font-medium">
-                  Phone
-                </label>
-                <input
-                  id="phone"
-                  type="tel"
-                  inputMode="tel"
-                  autoComplete="tel"
-                  {...register("phone")}
-                  className="w-full rounded-lg border border-graphite/18 bg-white/85 px-3 py-2 text-sm"
-                />
-                {errors.phone ? (
-                  <p className="text-xs text-walnut">{errors.phone.message}</p>
-                ) : null}
-              </div>
+              <FloatInput
+                label="Emri i plote"
+                id="customerName"
+                {...register("customerName")}
+                error={errors.customerName?.message}
+              />
+              <Controller
+                name="phone"
+                control={control}
+                render={({ field }) => (
+                  <PhoneInput
+                    id="phone"
+                    label="Telefoni"
+                    required
+                    value={field.value}
+                    onChange={field.onChange}
+                    onBlur={field.onBlur}
+                    autoComplete="tel"
+                    error={errors.phone?.message}
+                  />
+                )}
+              />
             </div>
 
-            <div className="space-y-1">
-              <label htmlFor="email" className="text-sm font-medium">
-                Email (optional)
-              </label>
-              <input
-                id="email"
-                {...register("email")}
-                className="w-full rounded-lg border border-graphite/18 bg-white/85 px-3 py-2 text-sm"
-              />
-              {errors.email ? (
-                <p className="text-xs text-walnut">{errors.email.message}</p>
-              ) : null}
-            </div>
+            <FloatInput
+              label="Email (opsionale)"
+              id="email"
+              {...register("email")}
+              error={errors.email?.message}
+            />
 
             <div className="grid gap-4 sm:grid-cols-3">
-              <div className="space-y-1">
-                <label htmlFor="country" className="text-sm font-medium">
-                  Country
-                </label>
-                <input
-                  id="country"
-                  {...register("country")}
-                  className="w-full rounded-lg border border-graphite/18 bg-white/85 px-3 py-2 text-sm"
-                />
-                {errors.country ? (
-                  <p className="text-xs text-walnut">{errors.country.message}</p>
-                ) : null}
-              </div>
-              <div className="space-y-1">
-                <label htmlFor="city" className="text-sm font-medium">
-                  City
-                </label>
-                <input
-                  id="city"
-                  {...register("city")}
-                  className="w-full rounded-lg border border-graphite/18 bg-white/85 px-3 py-2 text-sm"
-                />
-                {errors.city ? (
-                  <p className="text-xs text-walnut">{errors.city.message}</p>
-                ) : null}
-              </div>
-              <div className="space-y-1 sm:col-span-1">
-                <label htmlFor="address" className="text-sm font-medium">
-                  Address
-                </label>
-                <input
-                  id="address"
-                  {...register("address")}
-                  className="w-full rounded-lg border border-graphite/18 bg-white/85 px-3 py-2 text-sm"
-                />
-                {errors.address ? (
-                  <p className="text-xs text-walnut">{errors.address.message}</p>
-                ) : null}
-              </div>
-            </div>
-
-            <div className="space-y-1">
-              <label htmlFor="notes" className="text-sm font-medium">
-                Notes (optional)
-              </label>
-              <textarea
-                id="notes"
-                rows={3}
-                {...register("notes")}
-                className="w-full rounded-lg border border-graphite/18 bg-white/85 px-3 py-2 text-sm"
+              <FloatInput
+                label="Shteti"
+                id="country"
+                {...register("country")}
+                error={errors.country?.message}
+              />
+              <FloatInput
+                label="Qyteti"
+                id="city"
+                {...register("city")}
+                error={errors.city?.message}
+              />
+              <FloatInput
+                label="Adresa"
+                id="address"
+                {...register("address")}
+                error={errors.address?.message}
               />
             </div>
 
+            <FloatTextarea
+              label="Shenime (opsionale)"
+              id="notes"
+              rows={3}
+              {...register("notes")}
+            />
+
             <div className="space-y-2 rounded-xl border border-graphite/15 bg-white/70 p-3">
-              <label htmlFor="couponCode" className="text-xs uppercase tracking-[0.12em] text-graphite/68">
-                Coupon code
-              </label>
               <div className="flex gap-2">
-                <input
+                <FloatInput
+                  label="Kodi i kuponit"
                   id="couponCode"
                   value={couponCodeInput}
                   onChange={(event) => setCouponCodeInput(event.target.value)}
-                  placeholder="BERIL10"
-                  className="w-full rounded-lg border border-graphite/18 bg-white/90 px-3 py-2 text-sm uppercase"
+                  wrapperClassName="flex-1"
                 />
                 <button
                   type="button"
                   onClick={applyCoupon}
                   disabled={isCouponValidating}
-                  className="inline-flex h-10 items-center rounded-full border border-graphite/18 bg-white px-4 text-xs uppercase tracking-[0.12em] text-graphite disabled:opacity-50"
+                  className="mt-auto inline-flex h-10 items-center rounded-full border border-graphite/18 bg-white px-4 text-xs uppercase tracking-[0.12em] text-graphite disabled:opacity-50"
                 >
-                  {isCouponValidating ? "Checking" : "Apply"}
+                  {isCouponValidating ? "Duke verifikuar" : "Apliko"}
                 </button>
               </div>
               {couponMessage ? <p className="text-xs text-mineral">{couponMessage}</p> : null}
@@ -538,51 +498,39 @@ export default function CheckoutPage() {
             </div>
 
             <div className="grid gap-4 sm:grid-cols-2">
-              <div className="space-y-1">
-                <label htmlFor="deliveryMethod" className="text-sm font-medium">
-                  Delivery method
-                </label>
-                <select
-                  id="deliveryMethod"
-                  {...register("deliveryMethod")}
-                  className="w-full rounded-lg border border-graphite/18 bg-white/85 px-3 py-2 text-sm"
-                >
-                  <option value="home_delivery">Home Delivery</option>
-                  <option value="store_pickup">In-Store Pickup</option>
-                </select>
-              </div>
-              <div className="space-y-1">
-                <label htmlFor="paymentMethod" className="text-sm font-medium">
-                  Payment method
-                </label>
-                <select
-                  id="paymentMethod"
-                  {...register("paymentMethod")}
-                  className="w-full rounded-lg border border-graphite/18 bg-white/85 px-3 py-2 text-sm"
-                >
-                  {deliveryMethod === "home_delivery" ? (
-                    <>
-                      <option value="cash_on_delivery">Cash on Delivery</option>
-                      <option value="card_online">Card Online (Test)</option>
-                      <option value="bank_transfer">Bank Transfer</option>
-                    </>
-                  ) : (
-                    <>
-                      <option value="pay_in_store">Pay in Store on Pickup</option>
-                      <option value="card_online">Card Online (Test)</option>
-                      <option value="bank_transfer">Bank Transfer</option>
-                    </>
-                  )}
-                </select>
-                {errors.paymentMethod ? (
-                  <p className="text-xs text-walnut">{errors.paymentMethod.message}</p>
-                ) : null}
-              </div>
+              <FloatSelect
+                label="Menyra e dergeses"
+                id="deliveryMethod"
+                {...register("deliveryMethod")}
+              >
+                <option value="home_delivery">Dergese ne shtepi</option>
+                <option value="store_pickup">Terheqje ne dyqan</option>
+              </FloatSelect>
+              <FloatSelect
+                label="Menyra e pageses"
+                id="paymentMethod"
+                {...register("paymentMethod")}
+                error={errors.paymentMethod?.message}
+              >
+                {deliveryMethod === "home_delivery" ? (
+                  <>
+                    <option value="cash_on_delivery">Pagese ne dorezim</option>
+                    <option value="card_online">Karte online (Test)</option>
+                    <option value="bank_transfer">Transfer bankar</option>
+                  </>
+                ) : (
+                  <>
+                    <option value="pay_in_store">Pagese ne dyqan ne terheqje</option>
+                    <option value="card_online">Karte online (Test)</option>
+                    <option value="bank_transfer">Transfer bankar</option>
+                  </>
+                )}
+              </FloatSelect>
             </div>
 
             {affiliateCode ? (
               <p className="text-xs text-graphite/68">
-                Affiliate code detected: <span className="font-medium uppercase">{affiliateCode}</span>
+                U gjet kodi affiliate: <span className="font-medium uppercase">{affiliateCode}</span>
               </p>
             ) : null}
             <input type="hidden" {...register("couponCode")} />
@@ -599,13 +547,13 @@ export default function CheckoutPage() {
               disabled={isSubmitting}
               className="inline-flex h-11 items-center rounded-full bg-walnut px-6 text-sm font-medium text-white disabled:opacity-50"
             >
-              {isSubmitting ? "Placing order..." : "Place Order"}
+              {isSubmitting ? "Duke derguar porosine..." : "Perfundo Porosine"}
             </button>
           </form>
         </section>
 
         <aside className="surface-panel h-fit p-5">
-          <h2 className="text-2xl text-graphite">Order Summary</h2>
+          <h2 className="text-2xl text-graphite">Permbledhja e Porosise</h2>
           <ul className="mt-4 space-y-3 text-sm">
             {items.map((item) => (
               <li key={item.productId} className="flex items-center justify-between gap-3">
@@ -620,19 +568,19 @@ export default function CheckoutPage() {
           </ul>
           <dl className="mt-5 space-y-2 border-t border-graphite/12 pt-4 text-sm">
             <div className="flex items-center justify-between">
-              <dt className="text-graphite/72">Subtotal</dt>
+              <dt className="text-graphite/72">Nentotali</dt>
               <dd>{formatEur(subtotal)}</dd>
             </div>
             <div className="flex items-center justify-between">
-              <dt className="text-graphite/72">Delivery fee</dt>
+              <dt className="text-graphite/72">Tarifa e dergeses</dt>
               <dd>{formatEur(deliveryFee)}</dd>
             </div>
             <div className="flex items-center justify-between">
-              <dt className="text-graphite/72">Coupon discount</dt>
+              <dt className="text-graphite/72">Zbritja nga kuponi</dt>
               <dd className="text-mineral">-{formatEur(couponDiscount)}</dd>
             </div>
             <div className="flex items-center justify-between text-base font-medium">
-              <dt>Total</dt>
+              <dt>Totali</dt>
               <dd>{formatEur(total)}</dd>
             </div>
           </dl>

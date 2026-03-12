@@ -3,8 +3,10 @@ import {
   upsertJournalPostAction,
 } from "@/app/admin/actions";
 import { Container } from "@/components/layout/container";
+import { FloatInput, FloatSelect, FloatTextarea } from "@/components/ui/float-field";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { listAdminJournalPosts } from "@/lib/db/admin";
+import { formatStatusLabel } from "@/lib/utils/status-label";
 import { journalStatuses } from "@/types/domain";
 
 type AdminJournalPageProps = {
@@ -43,43 +45,39 @@ export default async function AdminJournalPage({
         <p className="text-xs uppercase tracking-[0.14em] text-graphite/62">
           Create post
         </p>
-        <input
+        <FloatInput
+          label="Post title"
           name="title"
           required
-          placeholder="Post title"
-          className="rounded-lg border border-graphite/18 bg-white/85 px-3 py-2 text-sm"
         />
-        <input
+        <FloatInput
+          label="Post slug"
           name="slug"
           required
-          placeholder="post-slug"
-          className="rounded-lg border border-graphite/18 bg-white/85 px-3 py-2 text-sm"
         />
-        <textarea
+        <FloatTextarea
+          label="Short excerpt"
           name="excerpt"
           rows={2}
           required
-          placeholder="Short excerpt"
-          className="rounded-lg border border-graphite/18 bg-white/85 px-3 py-2 text-sm"
         />
-        <textarea
+        <FloatTextarea
+          label="Article content"
           name="content"
           rows={6}
           required
-          placeholder="Article content"
-          className="rounded-lg border border-graphite/18 bg-white/85 px-3 py-2 text-sm"
         />
-        <select
+        <FloatSelect
+          label="Status"
           name="status"
           defaultValue="draft"
-          className="rounded-lg border border-graphite/18 bg-white/85 px-3 py-2 text-sm"
         >
           {journalStatuses.map((item) => (
             <option key={item} value={item}>
-              {item}
+              {formatStatusLabel(item)}
             </option>
           ))}
-        </select>
+        </FloatSelect>
         <button
           type="submit"
           className="inline-flex h-10 items-center justify-center rounded-full bg-walnut px-5 text-xs uppercase tracking-[0.12em] text-white"
@@ -89,24 +87,23 @@ export default async function AdminJournalPage({
       </form>
 
       <form method="get" className="surface-panel grid gap-3 p-4 sm:grid-cols-[1fr_12rem_auto]">
-        <input
+        <FloatInput
+          label="Search title or slug"
           name="search"
           defaultValue={search}
-          placeholder="Search title or slug"
-          className="w-full rounded-lg border border-graphite/18 bg-white/85 px-3 py-2 text-sm"
         />
-        <select
+        <FloatSelect
+          label="Status"
           name="status"
           defaultValue={status}
-          className="rounded-lg border border-graphite/18 bg-white/85 px-3 py-2 text-sm"
         >
           <option value="">All statuses</option>
           {journalStatuses.map((item) => (
             <option key={item} value={item}>
-              {item}
+              {formatStatusLabel(item)}
             </option>
           ))}
-        </select>
+        </FloatSelect>
         <button
           type="submit"
           className="inline-flex h-10 items-center justify-center rounded-full bg-mineral px-5 text-xs uppercase tracking-[0.12em] text-white"
@@ -128,40 +125,40 @@ export default async function AdminJournalPage({
                   style={{ backgroundImage: `url("${post.coverImage}")` }}
                 />
               ) : null}
-              <input
+              <FloatInput
+                label="Title"
                 name="title"
                 defaultValue={post.title}
-                className="rounded-lg border border-graphite/18 bg-white/85 px-3 py-2 text-sm"
               />
-              <input
+              <FloatInput
+                label="Slug"
                 name="slug"
                 defaultValue={post.slug}
-                className="rounded-lg border border-graphite/18 bg-white/85 px-3 py-2 text-sm"
               />
-              <textarea
+              <FloatTextarea
+                label="Excerpt"
                 name="excerpt"
                 rows={2}
                 defaultValue={post.excerpt}
-                className="rounded-lg border border-graphite/18 bg-white/85 px-3 py-2 text-sm"
               />
-              <textarea
+              <FloatTextarea
+                label="Content"
                 name="content"
                 rows={5}
                 defaultValue={post.content}
-                className="rounded-lg border border-graphite/18 bg-white/85 px-3 py-2 text-sm"
               />
               <div className="grid gap-3 sm:grid-cols-[12rem_auto]">
-                <select
+                <FloatSelect
+                  label="Status"
                   name="status"
                   defaultValue={post.status}
-                  className="rounded-lg border border-graphite/18 bg-white/85 px-3 py-2 text-sm"
                 >
                   {journalStatuses.map((item) => (
                     <option key={item} value={item}>
-                      {item}
+                      {formatStatusLabel(item)}
                     </option>
                   ))}
-                </select>
+                </FloatSelect>
                 <button
                   type="submit"
                   className="inline-flex h-10 items-center justify-center rounded-full border border-graphite/18 bg-white/85 px-5 text-xs uppercase tracking-[0.12em] text-graphite"
@@ -184,10 +181,10 @@ export default async function AdminJournalPage({
             action={uploadJournalCoverImageAction}
             className="grid gap-3 sm:grid-cols-[1fr_1fr_auto]"
           >
-            <select
+            <FloatSelect
+              label="Select post"
               name="journalId"
               required
-              className="rounded-lg border border-graphite/18 bg-white/85 px-3 py-2 text-sm"
             >
               <option value="">Select post</option>
               {posts.map((post) => (
@@ -195,7 +192,7 @@ export default async function AdminJournalPage({
                   {post.title}
                 </option>
               ))}
-            </select>
+            </FloatSelect>
             <input
               type="file"
               name="coverImage"

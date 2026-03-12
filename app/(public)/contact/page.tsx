@@ -7,7 +7,7 @@ import { Container } from "@/components/layout/container";
 import { SectionWrapper } from "@/components/layout/section-wrapper";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { getExtendedSiteSettings } from "@/lib/db/admin";
-import { getMessages } from "@/lib/i18n";
+import { getServerLocale, getServerMessages } from "@/lib/i18n/server";
 import { localBusinessJsonLd } from "@/lib/seo/structured-data";
 
 export const metadata: Metadata = {
@@ -35,8 +35,11 @@ function formatWhatsappHref(phone: string) {
 }
 
 export default async function ContactPage() {
-  const settings = await getExtendedSiteSettings();
-  const messages = getMessages();
+  const [settings, messages, locale] = await Promise.all([
+    getExtendedSiteSettings(),
+    getServerMessages(),
+    getServerLocale(),
+  ]);
   const businessJsonLd = localBusinessJsonLd(settings);
 
   const phoneHref = formatPhoneHref(settings.storePhone);
@@ -58,7 +61,7 @@ export default async function ContactPage() {
             </p>
 
             <div className="mt-6">
-              <ContactForm />
+              <ContactForm locale={locale} />
             </div>
           </section>
 

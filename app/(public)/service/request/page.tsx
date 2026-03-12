@@ -3,10 +3,12 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import Link from "next/link";
 import { startTransition, useRef, useState } from "react";
-import { useForm } from "react-hook-form";
+import { Controller, useForm } from "react-hook-form";
 
 import { Container } from "@/components/layout/container";
 import { SectionWrapper } from "@/components/layout/section-wrapper";
+import { FloatInput, FloatSelect, FloatTextarea } from "@/components/ui/float-field";
+import { PhoneInput } from "@/components/ui/phone-input";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { trackEvent } from "@/lib/analytics/track";
 import {
@@ -89,6 +91,7 @@ export default function ServiceRequestPage() {
 
   const {
     register,
+    control,
     handleSubmit,
     formState: { errors },
   } = useForm<RepairRequestInput>({
@@ -159,7 +162,7 @@ export default function ServiceRequestPage() {
       };
 
       if (!response.ok || !payload.ok || !payload.repairCode) {
-        throw new Error(payload.message ?? "Unable to submit repair request.");
+        throw new Error(payload.message ?? "Nuk u arrit te dergohet kerkesa per riparim.");
       }
 
       setRepairCode(payload.repairCode);
@@ -191,7 +194,7 @@ export default function ServiceRequestPage() {
         dateReceived: new Date().toISOString(),
         estimatedCompletion: null,
         amountDue: null,
-        customerNote: "Request received by BERIL.",
+        customerNote: "Kerkesa u pranua nga BERIL.",
         currentStatus:
           values.dropOffMethod === "bring_to_store"
             ? "awaiting_drop_off"
@@ -199,14 +202,14 @@ export default function ServiceRequestPage() {
         timeline: [
           {
             status: "request_received",
-            note: "Repair request received",
+            note: "Kerkesa per riparim u pranua",
             createdAt: new Date().toISOString(),
           },
         ],
       });
     } catch (error) {
       setErrorMessage(
-        error instanceof Error ? error.message : "Repair request failed.",
+        error instanceof Error ? error.message : "Kerkesa per riparim deshtoi.",
       );
     } finally {
       startTransition(() => {
@@ -219,190 +222,131 @@ export default function ServiceRequestPage() {
     <SectionWrapper className="py-16">
       <Container className="space-y-8">
         <header className="space-y-4">
-          <StatusBadge tone="service">Request Repair</StatusBadge>
-          <h1 className="text-5xl text-graphite sm:text-6xl">Repair Intake Form</h1>
+          <StatusBadge tone="service">Kerko Riparim</StatusBadge>
+          <h1 className="text-5xl text-graphite sm:text-6xl">Formulari i Pranimit per Riparim</h1>
           <p className="max-w-3xl text-sm text-graphite/76 sm:text-base">
-            Submit your item details and BERIL will follow up with the next service
-            steps.
+            Dergo detajet e produktit dhe BERIL do te te kontaktoje me hapat e ardhshem.
           </p>
         </header>
 
         <form onSubmit={onSubmit} className="surface-panel space-y-5 p-6 sm:p-7">
           <div className="grid gap-4 sm:grid-cols-2">
-            <div className="space-y-1">
-              <label htmlFor="customerName" className="text-sm font-medium">
-                Full name
-              </label>
-              <input
-                id="customerName"
-                {...register("customerName")}
-                className="w-full rounded-lg border border-graphite/18 bg-white/85 px-3 py-2 text-sm"
-              />
-              {errors.customerName ? (
-                <p className="text-xs text-walnut">{errors.customerName.message}</p>
-              ) : null}
-            </div>
-            <div className="space-y-1">
-              <label htmlFor="phone" className="text-sm font-medium">
-                Phone
-              </label>
-              <input
-                id="phone"
-                {...register("phone")}
-                className="w-full rounded-lg border border-graphite/18 bg-white/85 px-3 py-2 text-sm"
-              />
-              {errors.phone ? (
-                <p className="text-xs text-walnut">{errors.phone.message}</p>
-              ) : null}
-            </div>
+            <FloatInput
+              label="Emri i plote"
+              id="customerName"
+              {...register("customerName")}
+              error={errors.customerName?.message}
+            />
+            <Controller
+              name="phone"
+              control={control}
+              render={({ field }) => (
+                <PhoneInput
+                  id="phone"
+                  label="Telefoni"
+                  required
+                  value={field.value}
+                  onChange={field.onChange}
+                  onBlur={field.onBlur}
+                  autoComplete="tel"
+                  error={errors.phone?.message}
+                />
+              )}
+            />
           </div>
 
           <div className="grid gap-4 sm:grid-cols-2">
-            <div className="space-y-1">
-              <label htmlFor="email" className="text-sm font-medium">
-                Email
-              </label>
-              <input
-                id="email"
-                {...register("email")}
-                className="w-full rounded-lg border border-graphite/18 bg-white/85 px-3 py-2 text-sm"
-              />
-              {errors.email ? (
-                <p className="text-xs text-walnut">{errors.email.message}</p>
-              ) : null}
-            </div>
-            <div className="space-y-1">
-              <label htmlFor="preferredContactMethod" className="text-sm font-medium">
-                Preferred contact
-              </label>
-              <select
-                id="preferredContactMethod"
-                {...register("preferredContactMethod")}
-                className="w-full rounded-lg border border-graphite/18 bg-white/85 px-3 py-2 text-sm"
-              >
-                <option value="phone">Phone</option>
-                <option value="email">Email</option>
-                <option value="whatsapp">WhatsApp</option>
-              </select>
-            </div>
+            <FloatInput
+              label="Email"
+              id="email"
+              {...register("email")}
+              error={errors.email?.message}
+            />
+            <FloatSelect
+              label="Kontakti i preferuar"
+              id="preferredContactMethod"
+              {...register("preferredContactMethod")}
+            >
+              <option value="phone">Telefon</option>
+              <option value="email">Email</option>
+              <option value="whatsapp">WhatsApp</option>
+            </FloatSelect>
           </div>
 
           <div className="grid gap-4 sm:grid-cols-3">
-            <div className="space-y-1">
-              <label htmlFor="itemType" className="text-sm font-medium">
-                Item type
-              </label>
-              <select
-                id="itemType"
-                {...register("itemType")}
-                className="w-full rounded-lg border border-graphite/18 bg-white/85 px-3 py-2 text-sm"
-              >
-                <option value="watch">Watch</option>
-                <option value="eyewear">Eyewear</option>
-                <option value="other">Other</option>
-              </select>
-            </div>
-            <div className="space-y-1">
-              <label htmlFor="brand" className="text-sm font-medium">
-                Brand
-              </label>
-              <input
-                id="brand"
-                {...register("brand")}
-                className="w-full rounded-lg border border-graphite/18 bg-white/85 px-3 py-2 text-sm"
-              />
-            </div>
-            <div className="space-y-1">
-              <label htmlFor="model" className="text-sm font-medium">
-                Model
-              </label>
-              <input
-                id="model"
-                {...register("model")}
-                className="w-full rounded-lg border border-graphite/18 bg-white/85 px-3 py-2 text-sm"
-              />
-            </div>
-          </div>
-
-          <div className="grid gap-4 sm:grid-cols-2">
-            <div className="space-y-1">
-              <label htmlFor="serialNumber" className="text-sm font-medium">
-                Serial/reference (optional)
-              </label>
-              <input
-                id="serialNumber"
-                {...register("serialNumber")}
-                className="w-full rounded-lg border border-graphite/18 bg-white/85 px-3 py-2 text-sm"
-              />
-            </div>
-            <div className="space-y-1">
-              <label htmlFor="purchaseDate" className="text-sm font-medium">
-                Purchase date (optional)
-              </label>
-              <input
-                id="purchaseDate"
-                type="date"
-                {...register("purchaseDate")}
-                className="w-full rounded-lg border border-graphite/18 bg-white/85 px-3 py-2 text-sm"
-              />
-            </div>
-          </div>
-
-          <div className="grid gap-4 sm:grid-cols-2">
-            <div className="space-y-1">
-              <label htmlFor="serviceType" className="text-sm font-medium">
-                Service type
-              </label>
-              <select
-                id="serviceType"
-                {...register("serviceType")}
-                className="w-full rounded-lg border border-graphite/18 bg-white/85 px-3 py-2 text-sm"
-              >
-                <option value="battery">Battery</option>
-                <option value="strap_bracelet">Strap/Bracelet</option>
-                <option value="movement_issue">Movement issue</option>
-                <option value="crystal_issue">Crystal issue</option>
-                <option value="polishing">Polishing</option>
-                <option value="full_inspection">Full inspection</option>
-                <option value="eyewear_fitting">Eyewear fitting</option>
-                <option value="other">Other</option>
-              </select>
-            </div>
-            <div className="space-y-1">
-              <label htmlFor="dropOffMethod" className="text-sm font-medium">
-                Drop-off method
-              </label>
-              <select
-                id="dropOffMethod"
-                {...register("dropOffMethod")}
-                className="w-full rounded-lg border border-graphite/18 bg-white/85 px-3 py-2 text-sm"
-              >
-                <option value="bring_to_store">I will bring it to the store</option>
-                <option value="already_dropped_off">I already dropped it off</option>
-                <option value="contact_me_first">Contact me first</option>
-              </select>
-            </div>
-          </div>
-
-          <div className="space-y-1">
-            <label htmlFor="description" className="text-sm font-medium">
-              Issue description
-            </label>
-            <textarea
-              id="description"
-              rows={4}
-              {...register("description")}
-              className="w-full rounded-lg border border-graphite/18 bg-white/85 px-3 py-2 text-sm"
+            <FloatSelect
+              label="Lloji i produktit"
+              id="itemType"
+              {...register("itemType")}
+            >
+              <option value="watch">Ore</option>
+              <option value="eyewear">Syze</option>
+              <option value="other">Tjeter</option>
+            </FloatSelect>
+            <FloatInput
+              label="Brendi"
+              id="brand"
+              {...register("brand")}
             />
-            {errors.description ? (
-              <p className="text-xs text-walnut">{errors.description.message}</p>
-            ) : null}
+            <FloatInput
+              label="Modeli"
+              id="model"
+              {...register("model")}
+            />
           </div>
+
+          <div className="grid gap-4 sm:grid-cols-2">
+            <FloatInput
+              label="Serial/referenca (opsionale)"
+              id="serialNumber"
+              {...register("serialNumber")}
+            />
+            <FloatInput
+              label="Data e blerjes (opsionale)"
+              id="purchaseDate"
+              type="date"
+              {...register("purchaseDate")}
+            />
+          </div>
+
+          <div className="grid gap-4 sm:grid-cols-2">
+            <FloatSelect
+              label="Lloji i servisit"
+              id="serviceType"
+              {...register("serviceType")}
+            >
+              <option value="battery">Bateri</option>
+              <option value="strap_bracelet">Rrip/Byzylyk</option>
+              <option value="movement_issue">Problem me mekanizmin</option>
+              <option value="crystal_issue">Problem me xhamin</option>
+              <option value="polishing">Polirim</option>
+              <option value="full_inspection">Inspektim i plote</option>
+              <option value="eyewear_fitting">Pershtatje syzesh</option>
+              <option value="other">Tjeter</option>
+            </FloatSelect>
+            <FloatSelect
+              label="Menyra e dorezimit"
+              id="dropOffMethod"
+              {...register("dropOffMethod")}
+            >
+              <option value="bring_to_store">Do ta sjell ne dyqan</option>
+              <option value="already_dropped_off">E kam dorezuar tashme</option>
+              <option value="contact_me_first">Me kontakto fillimisht</option>
+            </FloatSelect>
+          </div>
+
+          <FloatTextarea
+            label="Pershkrimi i problemit"
+            id="description"
+            rows={4}
+            {...register("description")}
+            error={errors.description?.message}
+          />
 
           <div className="grid gap-4 sm:grid-cols-3">
             <div className="space-y-1">
               <label htmlFor="itemImages" className="text-sm font-medium">
-                Item images
+                Foto te produktit
               </label>
               <input
                 id="itemImages"
@@ -415,7 +359,7 @@ export default function ServiceRequestPage() {
             </div>
             <div className="space-y-1">
               <label htmlFor="damageImages" className="text-sm font-medium">
-                Damage images
+                Foto te demtimit
               </label>
               <input
                 id="damageImages"
@@ -428,7 +372,7 @@ export default function ServiceRequestPage() {
             </div>
             <div className="space-y-1">
               <label htmlFor="proofOfPurchase" className="text-sm font-medium">
-                Proof of purchase
+                Deshmi e blerjes
               </label>
               <input
                 id="proofOfPurchase"
@@ -442,11 +386,11 @@ export default function ServiceRequestPage() {
 
           <label className="flex items-center gap-2 rounded-lg border border-graphite/15 bg-white/75 px-3 py-2 text-sm text-graphite/78">
             <input type="checkbox" {...register("privacyAccepted")} />
-            I accept the privacy policy
+            Pranoj politiken e privatesise
           </label>
           <label className="flex items-center gap-2 rounded-lg border border-graphite/15 bg-white/75 px-3 py-2 text-sm text-graphite/78">
             <input type="checkbox" {...register("serviceTermsAccepted")} />
-            I accept the service terms
+            Pranoj kushtet e servisit
           </label>
 
           {errorMessage ? (
@@ -457,10 +401,10 @@ export default function ServiceRequestPage() {
 
           {repairCode ? (
             <div className="rounded-lg border border-mineral/35 bg-mineral/12 px-4 py-3 text-sm text-mineral">
-              Repair request submitted. Your repair code is <strong>{repairCode}</strong>.
+              Kerkesa u dergua me sukses. Kodi juaj i riparimit eshte <strong>{repairCode}</strong>.
               <div className="mt-2">
                 <Link href="/repair-track" className="underline">
-                  Track your repair
+                  Gjurmo riparimin
                 </Link>
               </div>
             </div>
@@ -471,7 +415,7 @@ export default function ServiceRequestPage() {
             disabled={isSubmitting}
             className="inline-flex h-11 items-center rounded-full bg-walnut px-6 text-sm font-medium text-white disabled:opacity-50"
           >
-            {isSubmitting ? "Submitting..." : "Submit Repair Request"}
+            {isSubmitting ? "Duke derguar..." : "Dergo Kerkesen"}
           </button>
         </form>
       </Container>

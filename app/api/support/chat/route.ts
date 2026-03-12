@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 
 import { addSupportMessage, createSupportThread } from "@/lib/db/crm-support";
+import { optionalPhoneInputSchema } from "@/lib/validations/phone";
 import { supportChannels } from "@/types/domain";
 
 const createThreadSchema = z.object({
@@ -10,7 +11,7 @@ const createThreadSchema = z.object({
   message: z.string().trim().min(2),
   customerName: z.string().trim().min(2).optional(),
   customerEmail: z.string().trim().email().optional().or(z.literal("")),
-  customerPhone: z.string().trim().optional(),
+  customerPhone: optionalPhoneInputSchema,
   channel: z.enum(supportChannels).default("web_chat"),
 });
 
@@ -65,4 +66,3 @@ export async function POST(request: Request) {
     return NextResponse.json({ ok: false, message }, { status: 400 });
   }
 }
-

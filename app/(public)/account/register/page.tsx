@@ -1,6 +1,8 @@
 import Link from "next/link";
 
 import { customerRegisterAction } from "@/app/(public)/account/actions";
+import { FloatInput } from "@/components/ui/float-field";
+import { PhoneInput } from "@/components/ui/phone-input";
 import { StatusBadge } from "@/components/ui/status-badge";
 
 export const metadata = {
@@ -49,58 +51,17 @@ export default async function CustomerRegisterPage({
       ) : null}
 
       <form action={customerRegisterAction} className="mt-5 space-y-4">
-        <div className="space-y-1">
-          <label htmlFor="fullName" className="text-sm font-medium text-graphite">
-            Full name
-          </label>
-          <input
-            id="fullName"
-            name="fullName"
-            type="text"
-            required
-            placeholder="Your full name"
-            className="w-full rounded-xl border border-graphite/20 bg-white/80 px-4 py-3 text-sm"
-          />
-        </div>
-        <div className="space-y-1">
-          <label htmlFor="email" className="text-sm font-medium text-graphite">
-            Email
-          </label>
-          <input
-            id="email"
-            name="email"
-            type="email"
-            required
-            placeholder="you@example.com"
-            className="w-full rounded-xl border border-graphite/20 bg-white/80 px-4 py-3 text-sm"
-          />
-        </div>
-        <div className="space-y-1">
-          <label htmlFor="phone" className="text-sm font-medium text-graphite">
-            Phone (optional)
-          </label>
-          <input
-            id="phone"
-            name="phone"
-            type="text"
-            placeholder="+383 ..."
-            className="w-full rounded-xl border border-graphite/20 bg-white/80 px-4 py-3 text-sm"
-          />
-        </div>
-        <div className="space-y-1">
-          <label htmlFor="password" className="text-sm font-medium text-graphite">
-            Password
-          </label>
-          <input
-            id="password"
-            name="password"
-            type="password"
-            minLength={8}
-            required
-            placeholder="Minimum 8 characters"
-            className="w-full rounded-xl border border-graphite/20 bg-white/80 px-4 py-3 text-sm"
-          />
-        </div>
+        <FloatInput label="Full name" id="fullName" name="fullName" type="text" required />
+        <FloatInput label="Email" id="email" name="email" type="email" required />
+        <PhoneInput label="Phone (optional)" id="phone" name="phone" />
+        <FloatInput
+          label="Password"
+          id="password"
+          name="password"
+          type="password"
+          minLength={8}
+          required
+        />
         <button
           type="submit"
           className="inline-flex h-11 items-center rounded-full bg-walnut px-5 text-sm font-medium text-white"

@@ -1,4 +1,5 @@
 import { Container } from "@/components/layout/container";
+import { FloatInput } from "@/components/ui/float-field";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { listAdminCustomers } from "@/lib/db/admin";
 
@@ -34,11 +35,10 @@ export default async function AdminCustomersPage({
       </header>
 
       <form method="get" className="surface-panel grid gap-3 p-4 sm:grid-cols-[1fr_auto]">
-        <input
+        <FloatInput
+          label="Search by name, email, phone"
           name="search"
           defaultValue={search}
-          placeholder="Search by name, email, phone"
-          className="w-full rounded-lg border border-graphite/18 bg-white/85 px-3 py-2 text-sm"
         />
         <button
           type="submit"

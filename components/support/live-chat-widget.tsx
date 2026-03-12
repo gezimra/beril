@@ -3,6 +3,8 @@
 import { MessageCircle, Send, X } from "lucide-react";
 import { startTransition, useEffect, useState } from "react";
 
+import { FloatInput, FloatTextarea } from "@/components/ui/float-field";
+import { PhoneInput } from "@/components/ui/phone-input";
 import { trackEvent } from "@/lib/analytics/track";
 
 export function LiveChatWidget() {
@@ -117,29 +119,25 @@ export function LiveChatWidget() {
           <div className="space-y-3 p-4">
             {!threadId ? (
               <>
-                <input
+                <FloatInput
+                  label="Emri"
                   value={customerName}
                   onChange={(event) => setCustomerName(event.target.value)}
-                  placeholder="Emri"
-                  className="w-full rounded-lg border border-graphite/18 bg-white/85 px-3 py-2 text-sm"
                 />
-                <input
+                <FloatInput
+                  label="Email (opsionale)"
                   value={customerEmail}
                   onChange={(event) => setCustomerEmail(event.target.value)}
-                  placeholder="Email (opsionale)"
-                  className="w-full rounded-lg border border-graphite/18 bg-white/85 px-3 py-2 text-sm"
                 />
-                <input
+                <PhoneInput
+                  label="Telefoni (opsionale)"
                   value={customerPhone}
-                  onChange={(event) => setCustomerPhone(event.target.value)}
-                  placeholder="Telefoni (opsionale)"
-                  className="w-full rounded-lg border border-graphite/18 bg-white/85 px-3 py-2 text-sm"
+                  onChange={setCustomerPhone}
                 />
-                <input
+                <FloatInput
+                  label="Subjekti"
                   value={subject}
                   onChange={(event) => setSubject(event.target.value)}
-                  placeholder="Subjekti"
-                  className="w-full rounded-lg border border-graphite/18 bg-white/85 px-3 py-2 text-sm"
                 />
               </>
             ) : (
@@ -148,12 +146,11 @@ export function LiveChatWidget() {
               </p>
             )}
 
-            <textarea
+            <FloatTextarea
+              label="Shkruaj mesazhin..."
               value={message}
               onChange={(event) => setMessage(event.target.value)}
               rows={3}
-              placeholder="Shkruaj mesazhin..."
-              className="w-full rounded-lg border border-graphite/18 bg-white/85 px-3 py-2 text-sm"
             />
 
             {statusMessage ? <p className="text-xs text-mineral">{statusMessage}</p> : null}
@@ -183,4 +180,3 @@ export function LiveChatWidget() {
     </div>
   );
 }
-

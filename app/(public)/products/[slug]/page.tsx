@@ -22,6 +22,7 @@ import {
   groupSpecsForDisplay,
 } from "@/lib/db/catalog";
 import { env } from "@/lib/env";
+import { getServerMessages } from "@/lib/i18n/server";
 import { breadcrumbJsonLd, productJsonLd } from "@/lib/seo/structured-data";
 import { siteConfig } from "@/lib/site";
 import { formatEur } from "@/lib/utils/money";
@@ -38,11 +39,14 @@ export async function generateMetadata({
   params,
 }: ProductDetailPageProps): Promise<Metadata> {
   const { slug } = await params;
-  const product = await getProductBySlug(slug);
+  const [product, messages] = await Promise.all([
+    getProductBySlug(slug),
+    getServerMessages(),
+  ]);
 
   if (!product) {
     return {
-      title: "Product Not Found",
+      title: messages.productPage.notFound,
       robots: {
         index: false,
         follow: false,
@@ -70,7 +74,10 @@ export async function generateMetadata({
 
 export default async function ProductDetailPage({ params }: ProductDetailPageProps) {
   const { slug } = await params;
-  const product = await getProductBySlug(slug);
+  const [product, messages] = await Promise.all([
+    getProductBySlug(slug),
+    getServerMessages(),
+  ]);
 
   if (!product) {
     notFound();
@@ -86,10 +93,13 @@ export default async function ProductDetailPage({ params }: ProductDetailPagePro
 
   const productLd = productJsonLd(product);
   const breadcrumbLd = breadcrumbJsonLd([
-    { position: 1, name: "Home", item: `${siteUrl}/` },
+    { position: 1, name: messages.productPage.home, item: `${siteUrl}/` },
     {
       position: 2,
-      name: product.category === "watch" ? "Watches" : "Eyewear",
+      name:
+        product.category === "watch"
+          ? messages.productPage.watches
+          : messages.productPage.eyewear,
       item:
         product.category === "watch"
           ? `${siteUrl}/watches`
@@ -151,7 +161,7 @@ export default async function ProductDetailPage({ params }: ProductDetailPagePro
                 {movement ? (
                   <StatusBadge tone="neutral">{movement}</StatusBadge>
                 ) : null}
-                {product.isNew ? <StatusBadge tone="premium">New</StatusBadge> : null}
+                {product.isNew ? <StatusBadge tone="premium">{messages.productPage.newBadge}</StatusBadge> : null}
                 <StatusBadge tone="service">
                   {stockStatusLabel(product.stockStatus)}
                 </StatusBadge>
@@ -201,25 +211,24 @@ export default async function ProductDetailPage({ params }: ProductDetailPagePro
                   }}
                   className="inline-flex h-11 items-center rounded-full border border-mineral/35 bg-mineral/12 px-6 text-sm font-medium text-mineral"
                 >
-                  Inquire on WhatsApp
+                  {messages.productPage.inquireWhatsapp}
                 </TrackedExternalLink>
               </div>
               <p className="text-xs text-graphite/62">
-                Payment is completed on delivery or when you collect your order in
-                store.
+                {messages.productPage.paymentNote}
               </p>
             </div>
           </div>
 
           <div className="grid gap-7 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
             <article className="surface-panel p-7">
-              <h2 className="text-3xl text-graphite">Product Details</h2>
+              <h2 className="text-3xl text-graphite">{messages.productPage.details}</h2>
               <p className="mt-3 text-sm leading-7 text-graphite/76">
                 {product.description}
               </p>
             </article>
             <article className="surface-panel p-7">
-              <h2 className="text-3xl text-graphite">Specifications</h2>
+              <h2 className="text-3xl text-graphite">{messages.productPage.specs}</h2>
               <dl className="mt-4 space-y-3 text-sm">
                 {specs.map((spec) => (
                   <div
@@ -238,12 +247,12 @@ export default async function ProductDetailPage({ params }: ProductDetailPagePro
 
           <div className="space-y-4">
             <div className="flex items-center justify-between">
-              <h2 className="text-4xl text-graphite">Related Products</h2>
+              <h2 className="text-4xl text-graphite">{messages.productPage.related}</h2>
               <Link
                 href={product.category === "watch" ? "/watches" : "/eyewear"}
                 className="text-xs uppercase tracking-[0.14em] text-graphite/70"
               >
-                View Category
+                {messages.productPage.viewCategory}
               </Link>
             </div>
             <div className="grid grid-cols-2 gap-4 lg:gap-5 xl:grid-cols-4">

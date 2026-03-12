@@ -5,12 +5,14 @@ import {
   upsertPromotionAction,
 } from "@/app/admin/actions";
 import { Container } from "@/components/layout/container";
+import { FloatInput, FloatSelect, FloatTextarea } from "@/components/ui/float-field";
 import { StatusBadge } from "@/components/ui/status-badge";
 import {
   listAdminCampaigns,
   listAdminCoupons,
   listAdminPromotions,
 } from "@/lib/db/payments-promotions";
+import { formatStatusLabel } from "@/lib/utils/status-label";
 import {
   campaignStatuses,
   couponStatuses,
@@ -54,26 +56,25 @@ export default async function AdminMarketingPage({
       </header>
 
       <form method="get" className="surface-panel grid gap-3 p-4 sm:grid-cols-[1fr_14rem_auto]">
-        <input
+        <FloatInput
           name="search"
           defaultValue={search}
-          placeholder="Search name/code"
-          className="w-full rounded-lg border border-graphite/18 bg-white/85 px-3 py-2 text-sm"
+          label="Search name/code"
         />
-        <select
+        <FloatSelect
           name="status"
           defaultValue={status}
-          className="rounded-lg border border-graphite/18 bg-white/85 px-3 py-2 text-sm"
+          label="All statuses"
         >
           <option value="">All statuses</option>
           {Array.from(
             new Set([...campaignStatuses, ...promotionStatuses, ...couponStatuses]),
           ).map((item) => (
             <option key={item} value={item}>
-              {item}
+              {formatStatusLabel(item)}
             </option>
           ))}
-        </select>
+        </FloatSelect>
         <button
           type="submit"
           className="inline-flex h-10 items-center justify-center rounded-full bg-walnut px-5 text-xs uppercase tracking-[0.12em] text-white"
@@ -85,55 +86,51 @@ export default async function AdminMarketingPage({
       <section className="surface-panel grid gap-4 p-5 lg:grid-cols-2">
         <form action={upsertCampaignAction} className="space-y-2 rounded-xl border border-graphite/12 bg-white/70 p-4">
           <p className="text-xs uppercase tracking-[0.14em] text-graphite/62">Create Campaign</p>
-          <input
+          <FloatInput
             name="name"
             required
-            placeholder="Name"
-            className="w-full rounded-lg border border-graphite/18 bg-white/85 px-3 py-2 text-sm"
+            label="Name"
           />
-          <input
+          <FloatInput
             name="slug"
             required
-            placeholder="spring-launch"
-            className="w-full rounded-lg border border-graphite/18 bg-white/85 px-3 py-2 text-sm"
+            label="spring-launch"
           />
-          <textarea
+          <FloatTextarea
             name="description"
             rows={2}
-            placeholder="Description"
-            className="w-full rounded-lg border border-graphite/18 bg-white/85 px-3 py-2 text-sm"
+            label="Description"
           />
           <div className="grid gap-2 sm:grid-cols-2">
-            <select
+            <FloatSelect
               name="status"
               defaultValue="draft"
-              className="rounded-lg border border-graphite/18 bg-white/85 px-3 py-2 text-sm"
+              label="Status"
             >
               {campaignStatuses.map((item) => (
                 <option key={item} value={item}>
-                  {item}
+                  {formatStatusLabel(item)}
                 </option>
               ))}
-            </select>
-            <input
+            </FloatSelect>
+            <FloatInput
               name="budget"
               type="number"
               min="0"
               step="0.01"
-              placeholder="Budget EUR"
-              className="rounded-lg border border-graphite/18 bg-white/85 px-3 py-2 text-sm"
+              label="Budget EUR"
             />
           </div>
           <div className="grid gap-2 sm:grid-cols-2">
-            <input
+            <FloatInput
               name="startsAt"
               type="datetime-local"
-              className="rounded-lg border border-graphite/18 bg-white/85 px-3 py-2 text-sm"
+              label="Starts at"
             />
-            <input
+            <FloatInput
               name="endsAt"
               type="datetime-local"
-              className="rounded-lg border border-graphite/18 bg-white/85 px-3 py-2 text-sm"
+              label="Ends at"
             />
           </div>
           <button
@@ -146,10 +143,10 @@ export default async function AdminMarketingPage({
 
         <form action={upsertPromotionAction} className="space-y-2 rounded-xl border border-graphite/12 bg-white/70 p-4">
           <p className="text-xs uppercase tracking-[0.14em] text-graphite/62">Create Promotion</p>
-          <select
+          <FloatSelect
             name="campaignId"
             defaultValue=""
-            className="w-full rounded-lg border border-graphite/18 bg-white/85 px-3 py-2 text-sm"
+            label="Campaign"
           >
             <option value="">No campaign</option>
             {campaigns.map((campaign) => (
@@ -157,73 +154,69 @@ export default async function AdminMarketingPage({
                 {campaign.name}
               </option>
             ))}
-          </select>
-          <input
+          </FloatSelect>
+          <FloatInput
             name="name"
             required
-            placeholder="Promotion name"
-            className="w-full rounded-lg border border-graphite/18 bg-white/85 px-3 py-2 text-sm"
+            label="Promotion name"
           />
           <div className="grid gap-2 sm:grid-cols-3">
-            <select
+            <FloatSelect
               name="status"
               defaultValue="draft"
-              className="rounded-lg border border-graphite/18 bg-white/85 px-3 py-2 text-sm"
+              label="Status"
             >
               {promotionStatuses.map((item) => (
                 <option key={item} value={item}>
-                  {item}
+                  {formatStatusLabel(item)}
                 </option>
               ))}
-            </select>
-            <select
+            </FloatSelect>
+            <FloatSelect
               name="type"
               defaultValue="percentage"
-              className="rounded-lg border border-graphite/18 bg-white/85 px-3 py-2 text-sm"
+              label="Type"
             >
               {promotionTypes.map((item) => (
                 <option key={item} value={item}>
-                  {item}
+                  {formatStatusLabel(item)}
                 </option>
               ))}
-            </select>
-            <select
+            </FloatSelect>
+            <FloatSelect
               name="scope"
               defaultValue="order"
-              className="rounded-lg border border-graphite/18 bg-white/85 px-3 py-2 text-sm"
+              label="Scope"
             >
               {promotionScopes.map((item) => (
                 <option key={item} value={item}>
-                  {item}
+                  {formatStatusLabel(item)}
                 </option>
               ))}
-            </select>
+            </FloatSelect>
           </div>
           <div className="grid gap-2 sm:grid-cols-3">
-            <input
+            <FloatInput
               name="percentageOff"
               type="number"
               step="0.01"
               min="0"
               max="100"
-              placeholder="% off"
-              className="rounded-lg border border-graphite/18 bg-white/85 px-3 py-2 text-sm"
+              label="% off"
             />
-            <input
+            <FloatInput
               name="amountOff"
               type="number"
               step="0.01"
               min="0"
-              placeholder="Amount off EUR"
-              className="rounded-lg border border-graphite/18 bg-white/85 px-3 py-2 text-sm"
+              label="Amount off EUR"
             />
-            <input
+            <FloatInput
               name="minOrderTotal"
               type="number"
               step="0.01"
               min="0"
-              placeholder="Min order EUR"
-              className="rounded-lg border border-graphite/18 bg-white/85 px-3 py-2 text-sm"
+              label="Min order EUR"
             />
           </div>
           <label className="flex items-center gap-2 text-sm text-graphite/74">
@@ -231,15 +224,15 @@ export default async function AdminMarketingPage({
             Stackable
           </label>
           <div className="grid gap-2 sm:grid-cols-2">
-            <input
+            <FloatInput
               name="startsAt"
               type="datetime-local"
-              className="rounded-lg border border-graphite/18 bg-white/85 px-3 py-2 text-sm"
+              label="Starts at"
             />
-            <input
+            <FloatInput
               name="endsAt"
               type="datetime-local"
-              className="rounded-lg border border-graphite/18 bg-white/85 px-3 py-2 text-sm"
+              label="Ends at"
             />
           </div>
           <button
@@ -253,11 +246,12 @@ export default async function AdminMarketingPage({
 
       <section className="surface-panel p-5">
         <form action={upsertCouponAction} className="grid gap-3 md:grid-cols-7">
-          <select
+          <FloatSelect
             name="promotionId"
             required
             defaultValue=""
-            className="md:col-span-2 rounded-lg border border-graphite/18 bg-white/85 px-3 py-2 text-sm"
+            label="Select promotion"
+            wrapperClassName="md:col-span-2"
           >
             <option value="">Select promotion</option>
             {promotions.map((promotion) => (
@@ -265,37 +259,35 @@ export default async function AdminMarketingPage({
                 {promotion.name}
               </option>
             ))}
-          </select>
-          <input
+          </FloatSelect>
+          <FloatInput
             name="code"
             required
-            placeholder="BERIL10"
-            className="rounded-lg border border-graphite/18 bg-white/85 px-3 py-2 text-sm uppercase"
+            label="BERIL10"
           />
-          <select
+          <FloatSelect
             name="status"
             defaultValue="active"
-            className="rounded-lg border border-graphite/18 bg-white/85 px-3 py-2 text-sm"
+            label="Status"
           >
             {couponStatuses.map((item) => (
               <option key={item} value={item}>
-                {item}
+                {formatStatusLabel(item)}
               </option>
             ))}
-          </select>
-          <input
+          </FloatSelect>
+          <FloatInput
             name="usageLimit"
             type="number"
             min="1"
-            placeholder="Limit"
-            className="rounded-lg border border-graphite/18 bg-white/85 px-3 py-2 text-sm"
+            label="Limit"
           />
-          <input
+          <FloatInput
             name="perCustomerLimit"
             type="number"
             min="1"
             defaultValue={1}
-            className="rounded-lg border border-graphite/18 bg-white/85 px-3 py-2 text-sm"
+            label="Per customer"
           />
           <button
             type="submit"
@@ -311,11 +303,12 @@ export default async function AdminMarketingPage({
           action={assignCouponToCustomerAction}
           className="grid gap-3 md:grid-cols-7"
         >
-          <select
+          <FloatSelect
             name="couponId"
             required
             defaultValue=""
-            className="md:col-span-2 rounded-lg border border-graphite/18 bg-white/85 px-3 py-2 text-sm"
+            label="Select coupon"
+            wrapperClassName="md:col-span-2"
           >
             <option value="">Select coupon</option>
             {coupons.map((coupon) => (
@@ -323,29 +316,28 @@ export default async function AdminMarketingPage({
                 {coupon.code}
               </option>
             ))}
-          </select>
-          <input
+          </FloatSelect>
+          <FloatInput
             name="customerEmail"
             type="email"
             required
-            placeholder="customer@email.com"
-            className="md:col-span-2 rounded-lg border border-graphite/18 bg-white/85 px-3 py-2 text-sm"
+            label="customer@email.com"
+            wrapperClassName="md:col-span-2"
           />
-          <select
+          <FloatSelect
             name="status"
             defaultValue="active"
-            className="rounded-lg border border-graphite/18 bg-white/85 px-3 py-2 text-sm"
+            label="Status"
           >
-            <option value="active">active</option>
-            <option value="paused">paused</option>
-            <option value="expired">expired</option>
-          </select>
-          <input
+            <option value="active">Active</option>
+            <option value="paused">Paused</option>
+            <option value="expired">Expired</option>
+          </FloatSelect>
+          <FloatInput
             name="maxRedemptions"
             type="number"
             min="1"
-            placeholder="Max uses"
-            className="rounded-lg border border-graphite/18 bg-white/85 px-3 py-2 text-sm"
+            label="Max uses"
           />
           <button
             type="submit"
@@ -353,15 +345,17 @@ export default async function AdminMarketingPage({
           >
             Assign Coupon
           </button>
-          <input
+          <FloatInput
             name="startsAt"
             type="datetime-local"
-            className="md:col-span-2 rounded-lg border border-graphite/18 bg-white/85 px-3 py-2 text-sm"
+            label="Starts at"
+            wrapperClassName="md:col-span-2"
           />
-          <input
+          <FloatInput
             name="endsAt"
             type="datetime-local"
-            className="md:col-span-2 rounded-lg border border-graphite/18 bg-white/85 px-3 py-2 text-sm"
+            label="Ends at"
+            wrapperClassName="md:col-span-2"
           />
           <p className="md:col-span-3 text-xs text-graphite/62">
             Assign private coupons to customers by email. Assigned coupons will
@@ -380,7 +374,9 @@ export default async function AdminMarketingPage({
               campaigns.map((campaign) => (
                 <li key={campaign.id} className="rounded-lg border border-graphite/10 bg-white/75 px-3 py-2">
                   <p className="font-medium text-graphite">{campaign.name}</p>
-                  <p className="text-xs text-graphite/65">{campaign.status}</p>
+                  <p className="text-xs text-graphite/65">
+                    {formatStatusLabel(campaign.status)}
+                  </p>
                 </li>
               ))
             )}
@@ -397,7 +393,7 @@ export default async function AdminMarketingPage({
                 <li key={promotion.id} className="rounded-lg border border-graphite/10 bg-white/75 px-3 py-2">
                   <p className="font-medium text-graphite">{promotion.name}</p>
                   <p className="text-xs text-graphite/65">
-                    {promotion.type} | {promotion.status}
+                    {formatStatusLabel(promotion.type)} | {formatStatusLabel(promotion.status)}
                   </p>
                 </li>
               ))
@@ -415,7 +411,7 @@ export default async function AdminMarketingPage({
                 <li key={coupon.id} className="rounded-lg border border-graphite/10 bg-white/75 px-3 py-2">
                   <p className="font-medium text-graphite">{coupon.code}</p>
                   <p className="text-xs text-graphite/65">
-                    {coupon.status} | used {coupon.usageCount}
+                    {formatStatusLabel(coupon.status)} | used {coupon.usageCount}
                   </p>
                 </li>
               ))

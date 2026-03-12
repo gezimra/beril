@@ -1,13 +1,23 @@
 import { saveSiteSettingsAction } from "@/app/admin/actions";
 import { Container } from "@/components/layout/container";
+import { FloatInput, FloatTextarea } from "@/components/ui/float-field";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { getExtendedSiteSettings, listAdminContacts } from "@/lib/db/admin";
+
+function buildListInputs(values: string[], minSlots = 4, maxSlots = 10) {
+  const trimmed = values.map((value) => value.trim()).filter(Boolean);
+  const slotCount = Math.min(Math.max(trimmed.length + 1, minSlots), maxSlots);
+  return Array.from({ length: slotCount }, (_, index) => trimmed[index] ?? "");
+}
 
 export default async function AdminContentPage() {
   const [settings, contacts] = await Promise.all([
     getExtendedSiteSettings(),
     listAdminContacts(),
   ]);
+  const aboutValuesInputs = buildListInputs(settings.aboutValues, 4, 12);
+  const trustPointsInputs = buildListInputs(settings.trustPoints, 4, 12);
+  const serviceHighlightsInputs = buildListInputs(settings.serviceHighlights, 4, 12);
 
   return (
     <Container className="space-y-6">
@@ -23,131 +33,146 @@ export default async function AdminContentPage() {
         <p className="sm:col-span-2 text-xs uppercase tracking-[0.14em] text-graphite/62">
           Home Hero
         </p>
-        <input
+        <FloatInput
+          label="Hero headline"
           name="hero.headline"
           defaultValue={settings.heroHeadline}
-          placeholder="Hero headline"
-          className="sm:col-span-2 rounded-lg border border-graphite/18 bg-white/85 px-3 py-2 text-sm"
+          wrapperClassName="sm:col-span-2"
         />
-        <textarea
+        <FloatTextarea
+          label="Hero subheadline"
           name="hero.subheadline"
           defaultValue={settings.heroSubheadline}
           rows={3}
-          placeholder="Hero subheadline"
-          className="sm:col-span-2 rounded-lg border border-graphite/18 bg-white/85 px-3 py-2 text-sm"
+          wrapperClassName="sm:col-span-2"
         />
-        <input
+        <FloatInput
+          label="Primary CTA label"
           name="hero.primary_cta_label"
           defaultValue={settings.heroPrimaryCtaLabel}
-          placeholder="Primary CTA label"
-          className="rounded-lg border border-graphite/18 bg-white/85 px-3 py-2 text-sm"
         />
-        <input
+        <FloatInput
+          label="Primary CTA href"
           name="hero.primary_cta_href"
           defaultValue={settings.heroPrimaryCtaHref}
-          placeholder="Primary CTA href"
-          className="rounded-lg border border-graphite/18 bg-white/85 px-3 py-2 text-sm"
         />
-        <input
+        <FloatInput
+          label="Secondary CTA label"
           name="hero.secondary_cta_label"
           defaultValue={settings.heroSecondaryCtaLabel}
-          placeholder="Secondary CTA label"
-          className="rounded-lg border border-graphite/18 bg-white/85 px-3 py-2 text-sm"
         />
-        <input
+        <FloatInput
+          label="Secondary CTA href"
           name="hero.secondary_cta_href"
           defaultValue={settings.heroSecondaryCtaHref}
-          placeholder="Secondary CTA href"
-          className="rounded-lg border border-graphite/18 bg-white/85 px-3 py-2 text-sm"
         />
 
         <p className="sm:col-span-2 mt-2 text-xs uppercase tracking-[0.14em] text-graphite/62">
           About
         </p>
-        <textarea
+        <FloatTextarea
+          label="About intro"
           name="about.intro"
           defaultValue={settings.aboutIntro}
           rows={2}
-          placeholder="About intro"
-          className="sm:col-span-2 rounded-lg border border-graphite/18 bg-white/85 px-3 py-2 text-sm"
+          wrapperClassName="sm:col-span-2"
         />
-        <textarea
+        <FloatTextarea
+          label="About story"
           name="about.story"
           defaultValue={settings.aboutStory}
           rows={4}
-          placeholder="About story"
-          className="sm:col-span-2 rounded-lg border border-graphite/18 bg-white/85 px-3 py-2 text-sm"
+          wrapperClassName="sm:col-span-2"
         />
-        <textarea
-          name="about.values"
-          defaultValue={JSON.stringify(settings.aboutValues)}
-          rows={3}
-          placeholder='["Precision","Trust","Craft"]'
-          className="sm:col-span-2 rounded-lg border border-graphite/18 bg-white/85 px-3 py-2 text-sm"
-        />
+        <div className="sm:col-span-2 space-y-2 rounded-lg border border-graphite/10 bg-white/60 p-3">
+          <p className="text-xs uppercase tracking-[0.14em] text-graphite/62">About values</p>
+          <input type="hidden" name="about.values" value={JSON.stringify(settings.aboutValues)} />
+          {aboutValuesInputs.map((value, index) => (
+            <FloatInput
+              key={`about-values-${index}`}
+              id={`about-values-${index}`}
+              label={`Value ${index + 1}`}
+              name="about.values[]"
+              defaultValue={value}
+            />
+          ))}
+          <p className="text-xs text-graphite/56">
+            Fill as many items as needed. Empty rows are ignored.
+          </p>
+        </div>
 
         <p className="sm:col-span-2 mt-2 text-xs uppercase tracking-[0.14em] text-graphite/62">
           Trust and Service Lists
         </p>
-        <textarea
-          name="home.trust_points"
-          defaultValue={JSON.stringify(settings.trustPoints)}
-          rows={4}
-          placeholder='["Point 1","Point 2"]'
-          className="rounded-lg border border-graphite/18 bg-white/85 px-3 py-2 text-sm"
-        />
-        <textarea
-          name="home.service_highlights"
-          defaultValue={JSON.stringify(settings.serviceHighlights)}
-          rows={4}
-          placeholder='["Service 1","Service 2"]'
-          className="rounded-lg border border-graphite/18 bg-white/85 px-3 py-2 text-sm"
-        />
+        <div className="space-y-2 rounded-lg border border-graphite/10 bg-white/60 p-3">
+          <p className="text-xs uppercase tracking-[0.14em] text-graphite/62">Trust points</p>
+          <input type="hidden" name="home.trust_points" value={JSON.stringify(settings.trustPoints)} />
+          {trustPointsInputs.map((value, index) => (
+            <FloatInput
+              key={`trust-points-${index}`}
+              id={`trust-points-${index}`}
+              label={`Trust point ${index + 1}`}
+              name="home.trust_points[]"
+              defaultValue={value}
+            />
+          ))}
+        </div>
+        <div className="space-y-2 rounded-lg border border-graphite/10 bg-white/60 p-3">
+          <p className="text-xs uppercase tracking-[0.14em] text-graphite/62">Service highlights</p>
+          <input
+            type="hidden"
+            name="home.service_highlights"
+            value={JSON.stringify(settings.serviceHighlights)}
+          />
+          {serviceHighlightsInputs.map((value, index) => (
+            <FloatInput
+              key={`service-highlights-${index}`}
+              id={`service-highlights-${index}`}
+              label={`Service highlight ${index + 1}`}
+              name="home.service_highlights[]"
+              defaultValue={value}
+            />
+          ))}
+        </div>
 
         <p className="sm:col-span-2 mt-2 text-xs uppercase tracking-[0.14em] text-graphite/62">
           Store
         </p>
-        <input
+        <FloatInput
+          label="Store address"
           name="store.address"
           defaultValue={settings.storeAddress}
-          placeholder="Store address"
-          className="sm:col-span-2 rounded-lg border border-graphite/18 bg-white/85 px-3 py-2 text-sm"
+          wrapperClassName="sm:col-span-2"
         />
-        <input
+        <FloatInput
+          label="Store hours"
           name="store.hours"
           defaultValue={settings.storeHours}
-          placeholder="Store hours"
-          className="rounded-lg border border-graphite/18 bg-white/85 px-3 py-2 text-sm"
         />
-        <input
+        <FloatInput
+          label="Store phone"
           name="store.phone"
           defaultValue={settings.storePhone}
-          placeholder="Store phone"
-          className="rounded-lg border border-graphite/18 bg-white/85 px-3 py-2 text-sm"
         />
-        <input
+        <FloatInput
+          label="Store email"
           name="store.email"
           defaultValue={settings.storeEmail}
-          placeholder="Store email"
-          className="rounded-lg border border-graphite/18 bg-white/85 px-3 py-2 text-sm"
         />
-        <input
+        <FloatInput
+          label="Store whatsapp"
           name="store.whatsapp"
           defaultValue={settings.storeWhatsapp}
-          placeholder="Store whatsapp"
-          className="rounded-lg border border-graphite/18 bg-white/85 px-3 py-2 text-sm"
         />
-        <input
+        <FloatInput
+          label="Map URL"
           name="store.map_url"
           defaultValue={settings.mapUrl}
-          placeholder="Map URL"
-          className="rounded-lg border border-graphite/18 bg-white/85 px-3 py-2 text-sm"
         />
-        <input
+        <FloatInput
+          label="Home delivery fee"
           name="commerce.delivery_fee_home"
           defaultValue={settings.homeDeliveryFee}
-          placeholder="Home delivery fee"
-          className="rounded-lg border border-graphite/18 bg-white/85 px-3 py-2 text-sm"
         />
         <input type="hidden" name="business.name" value={settings.businessName} />
         <input type="hidden" name="seo.default_title" value={settings.defaultSeoTitle} />

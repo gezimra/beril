@@ -14,36 +14,36 @@ export default function CartPage() {
   const { items, subtotal, itemCount, updateQuantity, removeItem, clearCart } =
     useCart();
 
-  const deliveryEstimate = itemCount > 0 ? "2-4 business days" : "-";
+  const deliveryEstimate = itemCount > 0 ? "2-4 dite pune" : "-";
 
   return (
     <SectionWrapper className="py-16">
       <Container className="space-y-8">
         <header className="space-y-4">
-          <StatusBadge tone="premium">Cart</StatusBadge>
-          <h1 className="text-5xl text-graphite sm:text-6xl">Your Cart</h1>
+          <StatusBadge tone="premium">Shporta</StatusBadge>
+          <h1 className="text-5xl text-graphite sm:text-6xl">Shporta Juaj</h1>
           <p className="text-sm text-graphite/75 sm:text-base">
-            Review selected products before checkout.
+            Rishiko produktet e zgjedhura para porosise.
           </p>
         </header>
 
         {items.length === 0 ? (
           <div className="surface-panel p-8">
             <p className="text-sm text-graphite/74">
-              Your cart is empty. Browse watches and eyewear to add products.
+              Shporta eshte bosh. Shfleto oret dhe syzet per te shtuar produkte.
             </p>
             <div className="mt-5 flex flex-wrap gap-3">
               <Link
                 href="/watches"
                 className="inline-flex h-11 items-center rounded-full bg-walnut px-5 text-sm font-medium text-white"
               >
-                Browse Watches
+                Shfleto Oret
               </Link>
               <Link
                 href="/eyewear"
                 className="inline-flex h-11 items-center rounded-full border border-graphite/20 bg-white/75 px-5 text-sm font-medium text-graphite"
               >
-                Browse Eyewear
+                Shfleto Syzet
               </Link>
             </div>
           </div>
@@ -107,7 +107,7 @@ export default function CartPage() {
                             onClick={() => removeItem(item.productId)}
                             className="ml-2 text-xs uppercase tracking-[0.12em] text-graphite/62 hover:text-graphite"
                           >
-                            Remove
+                            Largo
                           </button>
                         </div>
                       </div>
@@ -118,18 +118,18 @@ export default function CartPage() {
             </section>
 
             <aside className="surface-panel h-fit p-5">
-              <h2 className="text-2xl text-graphite">Summary</h2>
+              <h2 className="text-2xl text-graphite">Permbledhje</h2>
               <dl className="mt-4 space-y-2 text-sm text-graphite/78">
                 <div className="flex items-center justify-between">
-                  <dt>Items</dt>
+                  <dt>Artikuj</dt>
                   <dd>{itemCount}</dd>
                 </div>
                 <div className="flex items-center justify-between">
-                  <dt>Subtotal</dt>
+                  <dt>Nentotali</dt>
                   <dd>{formatEur(subtotal)}</dd>
                 </div>
                 <div className="flex items-center justify-between">
-                  <dt>Delivery estimate</dt>
+                  <dt>Koha e dergeses</dt>
                   <dd>{deliveryEstimate}</dd>
                 </div>
               </dl>
@@ -137,14 +137,14 @@ export default function CartPage() {
                 href="/checkout"
                 className="mt-5 inline-flex h-11 w-full items-center justify-center rounded-full bg-walnut px-5 text-sm font-medium text-white"
               >
-                Continue to Checkout
+                Vazhdo ne Pagese
               </Link>
               <button
                 type="button"
                 onClick={clearCart}
                 className="mt-2 inline-flex h-10 w-full items-center justify-center rounded-full border border-graphite/18 bg-white/75 px-5 text-xs uppercase tracking-[0.12em] text-graphite"
               >
-                Clear Cart
+                Pastro Shporten
               </button>
             </aside>
           </div>

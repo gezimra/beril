@@ -1,11 +1,12 @@
 import { z } from "zod";
 
 import { preferredContactMethods } from "@/types/domain";
+import { phoneInputSchema } from "@/lib/validations/phone";
 
 export const repairRequestSchema = z
   .object({
     customerName: z.string().trim().min(2),
-    phone: z.string().trim().min(7),
+    phone: phoneInputSchema,
     email: z.string().trim().email().optional().or(z.literal("")),
     preferredContactMethod: z.enum(preferredContactMethods),
     itemType: z.enum(["watch", "eyewear", "other"]),

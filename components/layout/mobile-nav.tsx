@@ -57,6 +57,11 @@ export function MobileNav({
     };
   }, [isOpen]);
 
+  useEffect(() => {
+    setIsOpen(false);
+    setExpanded(null);
+  }, [pathname]);
+
   const openMenu = () => {
     startTransition(() => setIsOpen(true));
   };

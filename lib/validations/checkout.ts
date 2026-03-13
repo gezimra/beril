@@ -16,6 +16,7 @@ export const checkoutSchema = z
     affiliateCode: z.string().trim().max(40).optional().or(z.literal("")),
     deliveryMethod: z.enum(deliveryMethods),
     paymentMethod: z.enum(paymentMethods),
+    locale: z.enum(["sq", "en"]).optional(),
   })
   .superRefine((data, context) => {
     if (

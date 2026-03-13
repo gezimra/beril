@@ -7,6 +7,7 @@ import {
   AddToCartButton,
   GoToCartButton,
 } from "@/components/commerce/add-to-cart-button";
+import { WishlistButton } from "@/components/commerce/wishlist-button";
 import { EventOnView } from "@/components/analytics/event-on-view";
 import { TrackedExternalLink } from "@/components/analytics/tracked-external-link";
 import { Container } from "@/components/layout/container";
@@ -141,6 +142,21 @@ export default async function ProductDetailPage({ params }: ProductDetailPagePro
 
       <SectionWrapper className="py-16">
         <Container className="space-y-12">
+          <nav aria-label="breadcrumb" className="flex items-center gap-1.5 text-xs text-graphite/55">
+            <Link href="/" className="hover:text-graphite transition-colors">
+              {messages.productPage.home}
+            </Link>
+            <span>/</span>
+            <Link
+              href={product.category === "watch" ? "/watches" : "/eyewear"}
+              className="hover:text-graphite transition-colors"
+            >
+              {product.category === "watch" ? messages.productPage.watches : messages.productPage.eyewear}
+            </Link>
+            <span>/</span>
+            <span className="text-graphite/80 line-clamp-1">{product.brand} {product.title}</span>
+          </nav>
+
           <div className="grid gap-8 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,1fr)]">
             <ProductGallery
               images={product.images}
@@ -163,7 +179,7 @@ export default async function ProductDetailPage({ params }: ProductDetailPagePro
                 ) : null}
                 {product.isNew ? <StatusBadge tone="premium">{messages.productPage.newBadge}</StatusBadge> : null}
                 <StatusBadge tone="service">
-                  {stockStatusLabel(product.stockStatus)}
+                  {stockStatusLabel(product.stockStatus, messages.productPage)}
                 </StatusBadge>
               </div>
               <p className="text-3xl font-medium text-graphite">
@@ -172,7 +188,7 @@ export default async function ProductDetailPage({ params }: ProductDetailPagePro
               <div className="flex flex-wrap gap-3">
                 {canAddToCart ? (
                   <AddToCartButton
-                    label={primaryCtaLabel(product)}
+                    label={primaryCtaLabel(product, messages.productPage)}
                     item={{
                       productId: product.id,
                       slug: product.slug,
@@ -197,10 +213,23 @@ export default async function ProductDetailPage({ params }: ProductDetailPagePro
                     }}
                     className="inline-flex h-11 items-center rounded-full bg-walnut px-6 text-sm font-medium text-white"
                   >
-                    {primaryCtaLabel(product)}
+                    {primaryCtaLabel(product, messages.productPage)}
                   </TrackedExternalLink>
                 )}
                 <GoToCartButton />
+                <WishlistButton
+                  size="md"
+                  item={{
+                    productId: product.id,
+                    slug: product.slug,
+                    title: product.title,
+                    brand: product.brand,
+                    category: product.category,
+                    imageUrl: primaryImageUrl,
+                    price: product.price,
+                    stockStatus: product.stockStatus,
+                  }}
+                />
                 <TrackedExternalLink
                   href={siteConfig.whatsappHref}
                   eventName="click_whatsapp"
@@ -261,6 +290,7 @@ export default async function ProductDetailPage({ params }: ProductDetailPagePro
                   key={relatedProduct.id}
                   product={relatedProduct}
                   movementLabel={getMovementLabel(relatedProduct)}
+                  messages={messages.productPage}
                 />
               ))}
             </div>

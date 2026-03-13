@@ -1,11 +1,13 @@
-import Link from "next/link";
 import type { ReactNode } from "react";
 
 import { customerLogoutAction } from "@/app/(public)/account/actions";
+import { AccountNav } from "@/components/account/account-nav";
 import { Container } from "@/components/layout/container";
 import { SectionWrapper } from "@/components/layout/section-wrapper";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { getAuthenticatedCustomerUser } from "@/lib/db/customer-account";
+
+export const dynamic = "force-dynamic";
 
 export default async function AccountLayout({ children }: { children: ReactNode }) {
   const user = await getAuthenticatedCustomerUser();
@@ -16,45 +18,7 @@ export default async function AccountLayout({ children }: { children: ReactNode 
         <aside className="surface-panel h-fit p-4">
           <StatusBadge tone="service">Customer</StatusBadge>
           <h2 className="mt-3 text-xl text-graphite">My Account</h2>
-          <p className="mt-1 text-xs text-graphite/65">
-            {user ? user.email : "Guest"}
-          </p>
-          <nav className="mt-4 space-y-1">
-            <Link
-              href="/account"
-              className="block rounded-lg px-3 py-2 text-sm text-graphite/82 hover:bg-white/70 hover:text-graphite"
-            >
-              Overview
-            </Link>
-            <Link
-              href="/account/orders"
-              className="block rounded-lg px-3 py-2 text-sm text-graphite/82 hover:bg-white/70 hover:text-graphite"
-            >
-              Orders
-            </Link>
-            <Link
-              href="/account/discounts"
-              className="block rounded-lg px-3 py-2 text-sm text-graphite/82 hover:bg-white/70 hover:text-graphite"
-            >
-              Discounts
-            </Link>
-            {!user ? (
-              <>
-                <Link
-                  href="/account/login"
-                  className="block rounded-lg px-3 py-2 text-sm text-graphite/82 hover:bg-white/70 hover:text-graphite"
-                >
-                  Login
-                </Link>
-                <Link
-                  href="/account/register"
-                  className="block rounded-lg px-3 py-2 text-sm text-graphite/82 hover:bg-white/70 hover:text-graphite"
-                >
-                  Register
-                </Link>
-              </>
-            ) : null}
-          </nav>
+          <AccountNav email={user?.email ?? null} />
 
           {user ? (
             <form action={customerLogoutAction} className="mt-5">
@@ -73,4 +37,3 @@ export default async function AccountLayout({ children }: { children: ReactNode 
     </SectionWrapper>
   );
 }
-

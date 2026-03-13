@@ -34,11 +34,8 @@ export type CatalogSearchQuery = z.infer<typeof rawCatalogSearchSchema>;
 type RawSearchParams = Record<string, string | string[] | undefined>;
 
 function singleParam(value: string | string[] | undefined): string | undefined {
-  if (Array.isArray(value)) {
-    return value[0];
-  }
-
-  return value;
+  const raw = Array.isArray(value) ? value[0] : value;
+  return raw === "" ? undefined : raw;
 }
 
 export function parseCatalogSearchParams(searchParams: RawSearchParams) {

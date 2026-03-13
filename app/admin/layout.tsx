@@ -18,14 +18,22 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
         <aside className="surface-panel order-2 h-fit p-3 sm:p-4 lg:order-1 lg:p-5">
           <p className="text-xs uppercase tracking-[0.2em] text-graphite/65">BERIL Admin</p>
           <AdminSidebarNav />
-          <form action={logoutAction} className="mt-4 sm:mt-5 lg:mt-6">
-            <button
-              type="submit"
+          <div className="mt-4 flex flex-col gap-2 sm:mt-5 lg:mt-6">
+            <a
+              href="/"
               className="inline-flex h-9 items-center rounded-full border border-graphite/18 bg-white/80 px-4 text-xs uppercase tracking-[0.12em] text-graphite"
             >
-              Sign out
-            </button>
-          </form>
+              View Shop →
+            </a>
+            <form action={logoutAction}>
+              <button
+                type="submit"
+                className="inline-flex h-9 items-center rounded-full border border-graphite/18 bg-white/80 px-4 text-xs uppercase tracking-[0.12em] text-graphite"
+              >
+                Sign out
+              </button>
+            </form>
+          </div>
         </aside>
         <section className="order-1 min-w-0 lg:order-2">{children}</section>
       </Container>

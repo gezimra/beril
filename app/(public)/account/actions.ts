@@ -3,11 +3,16 @@
 import { redirect } from "next/navigation";
 import { z } from "zod";
 
+import { revalidatePath } from "next/cache";
+
 import {
   loginCustomerAccount,
   logoutCustomerAccount,
   registerCustomerAccount,
+  updateCheckoutProfileForAuthenticatedCustomer,
 } from "@/lib/db/customer-account";
+import { createSupabaseServerClient } from "@/lib/db/supabase/server";
+import { env } from "@/lib/env";
 import { optionalPhoneInputSchema } from "@/lib/validations/phone";
 
 const loginSchema = z.object({
@@ -105,4 +110,87 @@ export async function customerRegisterAction(formData: FormData) {
 export async function customerLogoutAction() {
   await logoutCustomerAccount();
   redirect("/account/login?signed_out=1");
+}
+
+const profileUpdateSchema = z.object({
+  customerName: z.string().trim().min(2),
+  phone: optionalPhoneInputSchema,
+  country: z.string().trim().min(1).default("Kosovo"),
+  city: z.string().trim(),
+  address: z.string().trim(),
+});
+
+export async function customerUpdateProfileAction(
+  _prevState: { error?: string; success?: boolean },
+  formData: FormData,
+): Promise<{ error?: string; success?: boolean }> {
+  const parsed = profileUpdateSchema.safeParse({
+    customerName: formData.get("customerName"),
+    phone: formData.get("phone"),
+    country: formData.get("country"),
+    city: formData.get("city"),
+    address: formData.get("address"),
+  });
+
+  if (!parsed.success) {
+    return { error: "Invalid input. Check all fields and try again." };
+  }
+
+  try {
+    await updateCheckoutProfileForAuthenticatedCustomer({
+      ...parsed.data,
+      phone: parsed.data.phone ?? "",
+    });
+  } catch {
+    return { error: "Unable to save changes. Please try again." };
+  }
+
+  revalidatePath("/account");
+  return { success: true };
+}
+
+export async function customerRequestPasswordResetAction(
+  _prevState: { error?: string; success?: boolean },
+  formData: FormData,
+): Promise<{ error?: string; success?: boolean }> {
+  const email = z.string().trim().email().safeParse(formData.get("email"));
+  if (!email.success) {
+    return { error: "Enter a valid email address." };
+  }
+
+  const supabase = await createSupabaseServerClient();
+  if (!supabase) {
+    return { error: "Service unavailable. Please try again." };
+  }
+
+  const siteUrl = env.client.siteUrl.replace(/\/+$/, "");
+
+  await supabase.auth.resetPasswordForEmail(email.data, {
+    redirectTo: `${siteUrl}/auth/callback?next=/account/reset-password`,
+  });
+
+  // Always succeed to avoid email enumeration.
+  return { success: true };
+}
+
+export async function customerResetPasswordAction(
+  _prevState: { error?: string; success?: boolean },
+  formData: FormData,
+): Promise<{ error?: string; success?: boolean }> {
+  const password = z.string().min(8).safeParse(formData.get("password"));
+  if (!password.success) {
+    return { error: "Password must be at least 8 characters." };
+  }
+
+  const supabase = await createSupabaseServerClient();
+  if (!supabase) {
+    return { error: "Service unavailable. Please try again." };
+  }
+
+  const { error } = await supabase.auth.updateUser({ password: password.data });
+  if (error) {
+    return { error: "Unable to update password. The link may have expired." };
+  }
+
+  return { success: true };
 }

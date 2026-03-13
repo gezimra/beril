@@ -1,6 +1,7 @@
 import Link from "next/link";
 import type { Metadata } from "next";
 
+import { buttonVariants } from "@/components/ui/button";
 import { ContactQuickActions } from "@/components/content/contact-quick-actions";
 import { Container } from "@/components/layout/container";
 import { SectionWrapper } from "@/components/layout/section-wrapper";
@@ -77,16 +78,10 @@ export default async function ServicePage() {
             ))}
           </ol>
           <div className="mt-6 flex flex-wrap gap-3">
-            <Link
-              href="/service/request"
-              className="inline-flex h-11 items-center rounded-full bg-walnut px-5 text-sm font-medium text-white"
-            >
+            <Link href="/service/request" className={buttonVariants({ variant: "primary" })}>
               {messages.servicePage.startRepair}
             </Link>
-            <Link
-              href="/repair-track"
-              className="inline-flex h-11 items-center rounded-full border border-graphite/20 bg-white/75 px-5 text-sm font-medium text-graphite"
-            >
+            <Link href="/repair-track" className={buttonVariants({ variant: "secondary" })}>
               {messages.servicePage.trackRepair}
             </Link>
           </div>

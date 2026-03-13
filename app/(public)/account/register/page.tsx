@@ -1,6 +1,7 @@
 import Link from "next/link";
 
 import { customerRegisterAction } from "@/app/(public)/account/actions";
+import { Button } from "@/components/ui/button";
 import { FloatInput } from "@/components/ui/float-field";
 import { PhoneInput } from "@/components/ui/phone-input";
 import { StatusBadge } from "@/components/ui/status-badge";
@@ -62,12 +63,7 @@ export default async function CustomerRegisterPage({
           minLength={8}
           required
         />
-        <button
-          type="submit"
-          className="inline-flex h-11 items-center rounded-full bg-walnut px-5 text-sm font-medium text-white"
-        >
-          Create account
-        </button>
+        <Button type="submit">Create account</Button>
       </form>
 
       <p className="mt-5 text-sm text-graphite/72">

@@ -1,8 +1,10 @@
 import Link from "next/link";
 
+import { buttonVariants } from "@/components/ui/button";
 import { Container } from "@/components/layout/container";
 import { SectionWrapper } from "@/components/layout/section-wrapper";
 import { StatusBadge } from "@/components/ui/status-badge";
+import { CopyButton } from "@/components/ui/copy-button";
 import { formatEur } from "@/lib/utils/money";
 
 type OrderSuccessPageProps = {
@@ -51,9 +53,12 @@ export default async function OrderSuccessPage({
           </p>
 
           <div className="mt-7 rounded-xl border border-graphite/12 bg-white/78 p-5">
-            <p className="text-xs uppercase tracking-[0.14em] text-graphite/62">
-              Order Code
-            </p>
+            <div className="flex items-center justify-between">
+              <p className="text-xs uppercase tracking-[0.14em] text-graphite/62">
+                Order Code
+              </p>
+              <CopyButton value={orderCode} />
+            </div>
             <p className="mt-2 text-2xl font-medium text-graphite">{orderCode}</p>
           </div>
 
@@ -78,18 +83,27 @@ export default async function OrderSuccessPage({
             </div>
           </dl>
 
-          <div className="mt-7 flex flex-wrap gap-3">
-            <Link
-              href="/watches"
-              className="inline-flex h-11 items-center rounded-full bg-walnut px-5 text-sm font-medium text-white"
-            >
+          <div className="mt-7 rounded-xl border border-graphite/14 bg-white/75 p-4 space-y-2">
+            <p className="text-sm font-medium text-graphite">Track this order</p>
+            <p className="text-sm text-graphite/70">
+              Use your order code and the phone or email you provided to check status at any time.
+            </p>
+            <div className="flex flex-wrap gap-2 pt-1">
+              <Link href="/orders/track" className={buttonVariants({ variant: "primary", className: "h-10" })}>
+                Track Order
+              </Link>
+              <Link href="/account/register" className={buttonVariants({ variant: "secondary", className: "h-10" })}>
+                Create Account
+              </Link>
+            </div>
+            <p className="text-xs text-graphite/55">
+              Register with the same email to link this order to your account automatically.
+            </p>
+          </div>
+
+          <div className="mt-5 flex flex-wrap gap-3">
+            <Link href="/watches" className={buttonVariants({ variant: "secondary", className: "h-10" })}>
               Continue Shopping
-            </Link>
-            <Link
-              href="/service"
-              className="inline-flex h-11 items-center rounded-full border border-graphite/18 bg-white/75 px-5 text-sm font-medium text-graphite"
-            >
-              Explore Service
             </Link>
           </div>
         </article>

@@ -1,35 +1,53 @@
 import type { Product } from "@/types/product";
 
-export function stockStatusLabel(stockStatus: Product["stockStatus"]) {
+type StockMessages = {
+  stockInStock: string;
+  stockLimited: string;
+  stockAvailableOnRequest: string;
+  stockOutOfStock: string;
+};
+
+type CtaMessages = {
+  ctaAddToCart: string;
+  ctaReserveInStore: string;
+  ctaInquireWhatsapp: string;
+  ctaRequestAvailability: string;
+  ctaViewDetails: string;
+};
+
+export function stockStatusLabel(
+  stockStatus: Product["stockStatus"],
+  messages?: StockMessages,
+) {
   switch (stockStatus) {
     case "in_stock":
-      return "In Stock";
+      return messages?.stockInStock ?? "In Stock";
     case "limited":
-      return "Limited";
+      return messages?.stockLimited ?? "Limited";
     case "available_on_request":
-      return "Available on Request";
+      return messages?.stockAvailableOnRequest ?? "Available on Request";
     case "out_of_stock":
-      return "Out of Stock";
+      return messages?.stockOutOfStock ?? "Out of Stock";
     default:
       return stockStatus;
   }
 }
 
-export function primaryCtaLabel(product: Product) {
+export function primaryCtaLabel(product: Product, messages?: CtaMessages) {
   if (product.stockStatus === "out_of_stock") {
-    return "Request Availability";
+    return messages?.ctaRequestAvailability ?? "Request Availability";
   }
 
   switch (product.primaryCtaMode) {
     case "add_to_cart":
-      return "Add to Cart";
+      return messages?.ctaAddToCart ?? "Add to Cart";
     case "reserve_in_store":
-      return "Reserve in Store";
+      return messages?.ctaReserveInStore ?? "Reserve in Store";
     case "whatsapp_inquiry":
-      return "Inquire on WhatsApp";
+      return messages?.ctaInquireWhatsapp ?? "Inquire on WhatsApp";
     case "request_availability":
-      return "Request Availability";
+      return messages?.ctaRequestAvailability ?? "Request Availability";
     default:
-      return "View Details";
+      return messages?.ctaViewDetails ?? "View Details";
   }
 }

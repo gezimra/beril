@@ -6,6 +6,9 @@ import {
   listOrdersForAuthenticatedCustomer,
 } from "@/lib/db/customer-account";
 import { formatEur } from "@/lib/utils/money";
+import type { OrderStatus, PaymentMethod, PaymentStatus } from "@/types/domain";
+
+export const dynamic = "force-dynamic";
 
 export const metadata = {
   title: "My Orders",
@@ -14,6 +17,51 @@ export const metadata = {
     follow: false,
   },
 };
+
+function orderStatusLabel(status: OrderStatus): string {
+  const labels: Record<OrderStatus, string> = {
+    pending: "Pending",
+    confirmed: "Confirmed",
+    preparing: "Preparing",
+    out_for_delivery: "Out for Delivery",
+    ready_for_pickup: "Ready for Pickup",
+    delivered: "Delivered",
+    completed: "Completed",
+    cancelled: "Cancelled",
+  };
+  return labels[status] ?? status;
+}
+
+function paymentStatusLabel(status: PaymentStatus): string {
+  const labels: Record<PaymentStatus, string> = {
+    pending: "Pending",
+    not_required: "Not Required",
+    authorized: "Authorized",
+    paid: "Paid",
+    failed: "Failed",
+    refunded: "Refunded",
+    cancelled: "Cancelled",
+  };
+  return labels[status] ?? status;
+}
+
+function paymentMethodLabel(method: PaymentMethod): string {
+  const labels: Record<PaymentMethod, string> = {
+    cash_on_delivery: "Cash on Delivery",
+    pay_in_store: "Pay in Store",
+    card_online: "Card Online",
+    bank_transfer: "Bank Transfer",
+  };
+  return labels[method] ?? method;
+}
+
+function formatOrderDate(isoString: string): string {
+  return new Date(isoString).toLocaleDateString("en-GB", {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+  });
+}
 
 export default async function CustomerOrdersPage() {
   const user = await getAuthenticatedCustomerUser();
@@ -45,14 +93,15 @@ export default async function CustomerOrdersPage() {
                   <p className="text-xs uppercase tracking-[0.14em] text-graphite/62">
                     {order.orderCode}
                   </p>
-                  <p className="text-sm text-graphite/72">
-                    {new Date(order.createdAt).toLocaleString()}
-                  </p>
+                  <p className="text-sm text-graphite/72">{formatOrderDate(order.createdAt)}</p>
                 </div>
                 <div className="text-right">
-                  <p className="text-sm font-medium text-graphite">{order.orderStatus}</p>
+                  <p className="text-sm font-medium text-graphite">
+                    {orderStatusLabel(order.orderStatus)}
+                  </p>
                   <p className="text-xs text-graphite/65">
-                    payment: {order.paymentStatus} ({order.paymentMethod})
+                    {paymentStatusLabel(order.paymentStatus)} &middot;{" "}
+                    {paymentMethodLabel(order.paymentMethod)}
                   </p>
                 </div>
               </div>
@@ -60,7 +109,7 @@ export default async function CustomerOrdersPage() {
               <ul className="mt-3 space-y-1 text-sm text-graphite/78">
                 {order.items.map((item, index) => (
                   <li key={`${order.id}-item-${index}`}>
-                    {item.productTitle} ({item.productBrand}) x {item.quantity}
+                    {item.productTitle} ({item.productBrand}) &times; {item.quantity}
                   </li>
                 ))}
               </ul>
@@ -74,10 +123,12 @@ export default async function CustomerOrdersPage() {
                   <dt className="text-graphite/68">Delivery</dt>
                   <dd>{formatEur(order.deliveryFee)}</dd>
                 </div>
-                <div className="flex items-center justify-between">
-                  <dt className="text-graphite/68">Discount</dt>
-                  <dd className="text-mineral">-{formatEur(order.discountAmount)}</dd>
-                </div>
+                {order.discountAmount > 0 ? (
+                  <div className="flex items-center justify-between">
+                    <dt className="text-graphite/68">Discount</dt>
+                    <dd className="text-mineral">-{formatEur(order.discountAmount)}</dd>
+                  </div>
+                ) : null}
                 <div className="flex items-center justify-between font-medium">
                   <dt>Total</dt>
                   <dd>{formatEur(order.total)}</dd>
@@ -90,4 +141,3 @@ export default async function CustomerOrdersPage() {
     </article>
   );
 }
-

@@ -5,6 +5,7 @@ import Link from "next/link";
 import { startTransition, useRef, useState } from "react";
 import { Controller, useForm } from "react-hook-form";
 
+import { Button } from "@/components/ui/button";
 import { Container } from "@/components/layout/container";
 import { SectionWrapper } from "@/components/layout/section-wrapper";
 import { FloatInput, FloatSelect, FloatTextarea } from "@/components/ui/float-field";
@@ -410,13 +411,9 @@ export default function ServiceRequestPage() {
             </div>
           ) : null}
 
-          <button
-            type="submit"
-            disabled={isSubmitting}
-            className="inline-flex h-11 items-center rounded-full bg-walnut px-6 text-sm font-medium text-white disabled:opacity-50"
-          >
+          <Button type="submit" disabled={isSubmitting} className="px-6">
             {isSubmitting ? "Duke derguar..." : "Dergo Kerkesen"}
-          </button>
+          </Button>
         </form>
       </Container>
     </SectionWrapper>

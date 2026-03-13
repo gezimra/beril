@@ -5,6 +5,7 @@ import { startTransition, useState } from "react";
 import { useRouter } from "next/navigation";
 
 import { useCart } from "@/components/commerce/cart-provider";
+import { Button, buttonVariants } from "@/components/ui/button";
 import { trackEvent } from "@/lib/analytics/track";
 import type { CartItem } from "@/types/cart";
 
@@ -21,7 +22,7 @@ export function AddToCartButton({
   label,
   compact = false,
 }: AddToCartButtonProps) {
-  const { items, addItem, updateQuantity } = useCart();
+  const { items, addItem, updateQuantity, openCart } = useCart();
   const [isAdded, setIsAdded] = useState(false);
   const existingItem = items.find((entry) => entry.productId === item.productId);
   const currentQuantity = existingItem?.quantity ?? 0;
@@ -44,7 +45,7 @@ export function AddToCartButton({
             onClick={() =>
               updateQuantity(item.productId, Math.max(1, currentQuantity - 1))
             }
-            className={`inline-flex ${qtyButtonSize} items-center justify-center rounded-full border border-graphite/18 bg-white/90 text-graphite transition hover:bg-white disabled:opacity-45`}
+            className={`inline-flex ${qtyButtonSize} cursor-pointer items-center justify-center rounded-full border border-graphite/18 bg-white/90 text-graphite transition hover:bg-white disabled:cursor-not-allowed disabled:opacity-45`}
           >
             <Minus className="h-4 w-4" />
           </button>
@@ -59,7 +60,7 @@ export function AddToCartButton({
             onClick={() =>
               updateQuantity(item.productId, Math.min(10, currentQuantity + 1))
             }
-            className={`inline-flex ${qtyButtonSize} items-center justify-center rounded-full border border-graphite/18 bg-white/90 text-graphite transition hover:bg-white`}
+            className={`inline-flex ${qtyButtonSize} cursor-pointer items-center justify-center rounded-full border border-graphite/18 bg-white/90 text-graphite transition hover:bg-white`}
           >
             <Plus className="h-4 w-4" />
           </button>
@@ -74,6 +75,7 @@ export function AddToCartButton({
       disabled={disabled}
       onClick={() => {
         addItem(item);
+        openCart();
         trackEvent("add_to_cart", {
           route: `/products/${item.slug}`,
           productId: item.productId,
@@ -88,7 +90,7 @@ export function AddToCartButton({
           setIsAdded(false);
         }, 1200);
       }}
-      className={`inline-flex items-center rounded-full bg-walnut font-medium text-white disabled:cursor-not-allowed disabled:opacity-45 ${sizeClass}`}
+      className={buttonVariants({ variant: "primary", className: `${sizeClass} disabled:cursor-not-allowed disabled:opacity-45` })}
     >
       {isAdded ? "Added" : label}
     </button>
@@ -106,7 +108,7 @@ export function GoToCartButton() {
           router.push("/cart");
         });
       }}
-      className="inline-flex h-11 items-center rounded-full border border-graphite/20 bg-white/75 px-6 text-sm font-medium text-graphite"
+      className={buttonVariants({ variant: "secondary", className: "px-6" })}
     >
       View Cart
     </button>

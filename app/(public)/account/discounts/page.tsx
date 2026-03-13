@@ -6,6 +6,8 @@ import {
   listDiscountsForAuthenticatedCustomer,
 } from "@/lib/db/customer-account";
 
+export const dynamic = "force-dynamic";
+
 export const metadata = {
   title: "My Discounts",
   robots: {

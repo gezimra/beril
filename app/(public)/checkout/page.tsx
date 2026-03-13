@@ -7,6 +7,7 @@ import { useRouter } from "next/navigation";
 import { Controller, useForm } from "react-hook-form";
 
 import { useCart } from "@/components/commerce/cart-provider";
+import { Button, buttonVariants } from "@/components/ui/button";
 import { Container } from "@/components/layout/container";
 import { SectionWrapper } from "@/components/layout/section-wrapper";
 import { FloatInput, FloatSelect, FloatTextarea } from "@/components/ui/float-field";
@@ -14,6 +15,7 @@ import { PhoneInput } from "@/components/ui/phone-input";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { trackEvent } from "@/lib/analytics/track";
 import { formatEur } from "@/lib/utils/money";
+import { getCurrentLocale } from "@/lib/i18n";
 import { checkoutSchema, type CheckoutInput } from "@/lib/validations/checkout";
 
 function readCookie(name: string) {
@@ -282,6 +284,7 @@ export default function CheckoutPage() {
         ...values,
         couponCode: appliedCouponCode ?? values.couponCode ?? "",
         affiliateCode: affiliateCode || values.affiliateCode || "",
+        locale: getCurrentLocale(),
       };
 
       if (isSignedInCustomer && saveToAccount) {
@@ -376,7 +379,7 @@ export default function CheckoutPage() {
             </p>
             <Link
               href="/cart"
-              className="mt-5 inline-flex h-11 items-center rounded-full bg-walnut px-5 text-sm font-medium text-white"
+              className={buttonVariants({ variant: "primary", className: "mt-5" })}
             >
               Shko te Shporta
             </Link>
@@ -488,7 +491,7 @@ export default function CheckoutPage() {
                   type="button"
                   onClick={applyCoupon}
                   disabled={isCouponValidating}
-                  className="mt-auto inline-flex h-10 items-center rounded-full border border-graphite/18 bg-white px-4 text-xs uppercase tracking-[0.12em] text-graphite disabled:opacity-50"
+                  className="mt-auto inline-flex h-10 cursor-pointer items-center rounded-full border border-graphite/18 bg-white px-4 text-xs uppercase tracking-[0.12em] text-graphite transition hover:border-graphite/32 hover:bg-white hover:shadow-sm disabled:pointer-events-none disabled:opacity-50"
                 >
                   {isCouponValidating ? "Duke verifikuar" : "Apliko"}
                 </button>
@@ -542,13 +545,9 @@ export default function CheckoutPage() {
               </p>
             ) : null}
 
-            <button
-              type="submit"
-              disabled={isSubmitting}
-              className="inline-flex h-11 items-center rounded-full bg-walnut px-6 text-sm font-medium text-white disabled:opacity-50"
-            >
+            <Button type="submit" disabled={isSubmitting} className="px-6">
               {isSubmitting ? "Duke derguar porosine..." : "Perfundo Porosine"}
-            </button>
+            </Button>
           </form>
         </section>
 

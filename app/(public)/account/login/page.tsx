@@ -1,6 +1,7 @@
 import Link from "next/link";
 
 import { customerLoginAction } from "@/app/(public)/account/actions";
+import { Button } from "@/components/ui/button";
 import { FloatInput } from "@/components/ui/float-field";
 import { StatusBadge } from "@/components/ui/status-badge";
 
@@ -92,15 +93,15 @@ export default async function CustomerLoginPage({ searchParams }: LoginPageProps
           required
           autoComplete="current-password"
         />
-        <button
-          type="submit"
-          className="inline-flex h-11 items-center rounded-full bg-walnut px-5 text-sm font-medium text-white"
-        >
-          Sign in
-        </button>
+        <Button type="submit">Sign in</Button>
       </form>
 
       <p className="mt-5 text-sm text-graphite/72">
+        <Link href="/account/forgot-password" className="underline">
+          Forgot password?
+        </Link>
+      </p>
+      <p className="mt-3 text-sm text-graphite/72">
         No account yet?{" "}
         <Link href="/account/register" className="underline">
           Register now

@@ -234,6 +234,7 @@ export function SearchDrawer({
                       <input
                         id="search-input"
                         type="search"
+                        autoFocus
                         value={query}
                         onChange={(event) => setQuery(event.target.value)}
                         placeholder={messages.search.inputPlaceholder}

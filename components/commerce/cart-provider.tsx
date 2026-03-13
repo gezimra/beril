@@ -21,6 +21,9 @@ interface CartContextValue {
   updateQuantity: (productId: string, quantity: number) => void;
   removeItem: (productId: string) => void;
   clearCart: () => void;
+  isCartOpen: boolean;
+  openCart: () => void;
+  closeCart: () => void;
 }
 
 const CartContext = createContext<CartContextValue | null>(null);
@@ -50,6 +53,7 @@ function loadStoredCart() {
 export function CartProvider({ children }: { children: React.ReactNode }) {
   const [items, setItems] = useState<CartItem[]>([]);
   const [hasHydratedStorage, setHasHydratedStorage] = useState(false);
+  const [isCartOpen, setIsCartOpen] = useState(false);
 
   useEffect(() => {
     if (typeof window === "undefined" || hasHydratedStorage) {
@@ -83,6 +87,9 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
       items,
       itemCount,
       subtotal,
+      isCartOpen,
+      openCart: () => setIsCartOpen(true),
+      closeCart: () => setIsCartOpen(false),
       addItem: (item) => {
         startTransition(() => {
           setItems((currentItems) => {
@@ -126,7 +133,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
         });
       },
     };
-  }, [items]);
+  }, [items, isCartOpen]);
 
   return <CartContext.Provider value={value}>{children}</CartContext.Provider>;
 }

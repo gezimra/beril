@@ -2,6 +2,7 @@ import Link from "next/link";
 import Script from "next/script";
 import { ArrowRight, CheckCircle2, Clock3, MapPin, PhoneCall, ShieldCheck } from "lucide-react";
 
+import { buttonVariants } from "@/components/ui/button";
 import { ContactQuickActions } from "@/components/content/contact-quick-actions";
 import { Container } from "@/components/layout/container";
 import { HeroCarousel } from "@/components/layout/hero-carousel";
@@ -164,10 +165,7 @@ export default async function HomePage() {
                 </li>
               ))}
             </ul>
-            <Link
-              href="/service"
-              className="mt-6 inline-flex h-10 items-center rounded-full bg-mineral px-5 text-sm font-medium text-white transition hover:bg-mineral/92"
-            >
+            <Link href="/service" className={buttonVariants({ variant: "primary", className: "mt-6 h-10" })}>
               {messages.home.serviceStore.serviceCta}
             </Link>
           </article>

@@ -1,5 +1,6 @@
 "use client";
 
+import { buttonVariants } from "@/components/ui/button";
 import { trackEvent } from "@/lib/analytics/track";
 
 interface ContactQuickActionsProps {
@@ -54,7 +55,7 @@ export function ContactQuickActions({
             destination: mapUrl,
           })
         }
-        className="inline-flex h-10 items-center rounded-full border border-graphite/16 bg-white/82 px-4 text-xs uppercase tracking-[0.12em] text-graphite transition hover:bg-white"
+        className={buttonVariants({ variant: "secondary", className: "h-10 px-4 text-xs uppercase tracking-[0.12em]" })}
       >
         Get Directions
       </a>

@@ -11,8 +11,8 @@ export const siteConfig = {
   tagline: "Precision in Time & Vision",
   description:
     "Ora te kuruara, syze te rafinuara dhe servis i besuar ne Gjilan.",
-  phoneLabel: "+383 44 000 000",
-  phoneHref: "tel:+38344000000",
+  phoneLabel: "+383 44 133 483",
+  phoneHref: "tel:+38344133483",
   email: "info@beril.store",
-  whatsappHref: `https://wa.me/${defaultWhatsapp || "38344000000"}`,
+  whatsappHref: `https://wa.me/${defaultWhatsapp || "38344133483"}`,
 };

@@ -4,11 +4,13 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { startTransition, useState } from "react";
 import { useForm } from "react-hook-form";
 
+import { Button } from "@/components/ui/button";
 import { Container } from "@/components/layout/container";
 import { SectionWrapper } from "@/components/layout/section-wrapper";
 import { FloatInput } from "@/components/ui/float-field";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { trackEvent } from "@/lib/analytics/track";
+import { getMessages } from "@/lib/i18n";
 import { normalizeEmail, normalizePhone } from "@/lib/utils/codes";
 import {
   repairTrackSchema,
@@ -63,32 +65,10 @@ function getFallbackResult(input: RepairTrackInput): RepairTrackResult | null {
   }
 }
 
-function statusLabel(status: RepairTrackResult["currentStatus"]) {
-  switch (status) {
-    case "request_received":
-      return "Request received";
-    case "awaiting_drop_off":
-      return "Awaiting drop-off";
-    case "received_in_store":
-      return "Received in store";
-    case "under_inspection":
-      return "Under inspection";
-    case "waiting_parts":
-      return "Waiting parts";
-    case "in_repair":
-      return "In repair";
-    case "ready_for_pickup":
-      return "Ready for pickup";
-    case "completed":
-      return "Completed";
-    case "cancelled":
-      return "Cancelled";
-    default:
-      return status;
-  }
-}
-
 export default function RepairTrackPage() {
+  const messages = getMessages();
+  const t = messages.repairTrack;
+
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [result, setResult] = useState<RepairTrackResult | null>(null);
@@ -104,6 +84,21 @@ export default function RepairTrackPage() {
       phoneOrEmail: "",
     },
   });
+
+  function statusLabel(status: RepairTrackResult["currentStatus"]) {
+    switch (status) {
+      case "request_received": return t.statusRequestReceived;
+      case "awaiting_drop_off": return t.statusAwaitingDropOff;
+      case "received_in_store": return t.statusReceivedInStore;
+      case "under_inspection": return t.statusUnderInspection;
+      case "waiting_parts": return t.statusWaitingParts;
+      case "in_repair": return t.statusInRepair;
+      case "ready_for_pickup": return t.statusReadyForPickup;
+      case "completed": return t.statusCompleted;
+      case "cancelled": return t.statusCancelled;
+      default: return status;
+    }
+  }
 
   const onSubmit = handleSubmit(async (values) => {
     setIsSubmitting(true);
@@ -168,11 +163,10 @@ export default function RepairTrackPage() {
     <SectionWrapper className="py-16">
       <Container className="space-y-8">
         <header className="space-y-4">
-          <StatusBadge tone="service">Track Repair</StatusBadge>
-          <h1 className="text-5xl text-graphite sm:text-6xl">Repair Status</h1>
+          <StatusBadge tone="service">{t.badge}</StatusBadge>
+          <h1 className="text-5xl text-graphite sm:text-6xl">{t.title}</h1>
           <p className="max-w-2xl text-sm text-graphite/76 sm:text-base">
-            Enter your repair code and phone or email to view the current repair
-            timeline.
+            {t.subtitle}
           </p>
         </header>
 
@@ -181,25 +175,40 @@ export default function RepairTrackPage() {
           className="surface-panel grid gap-4 p-6 sm:grid-cols-[1fr_1fr_auto]"
         >
           <FloatInput
-            label="Repair code"
+            label={t.codeLabel}
             id="repairCode"
+            placeholder={t.codePlaceholder}
             {...register("repairCode")}
             error={errors.repairCode?.message}
           />
           <FloatInput
-            label="Phone or email"
+            label={t.lookupLabel}
             id="phoneOrEmail"
+            placeholder={t.lookupPlaceholder}
             {...register("phoneOrEmail")}
             error={errors.phoneOrEmail?.message}
           />
-          <button
-            type="submit"
-            disabled={isSubmitting}
-            className="mt-auto inline-flex h-11 items-center rounded-full bg-walnut px-6 text-sm font-medium text-white disabled:opacity-50"
-          >
-            {isSubmitting ? "Searching..." : "Track"}
-          </button>
+          <Button type="submit" disabled={isSubmitting} className="mt-auto px-6">
+            {isSubmitting ? t.submitting : t.submit}
+          </Button>
         </form>
+
+        <div className="surface-panel p-6">
+          <p className="text-xs uppercase tracking-[0.14em] text-graphite/65">
+            {t.howItWorksTitle}
+          </p>
+          <p className="mt-2 text-sm text-graphite/72">{t.howItWorksIntro}</p>
+          <ol className="mt-3 space-y-1.5">
+            {(t.howItWorksItems as readonly string[]).map((item, i) => (
+              <li key={i} className="flex items-start gap-2.5 text-sm text-graphite/72">
+                <span className="mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-graphite/10 text-[0.6rem] font-medium text-graphite/65">
+                  {i + 1}
+                </span>
+                {item}
+              </li>
+            ))}
+          </ol>
+        </div>
 
         {errorMessage ? (
           <p className="rounded-lg border border-walnut/35 bg-walnut/10 px-4 py-3 text-sm text-walnut">
@@ -212,7 +221,7 @@ export default function RepairTrackPage() {
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
               <div>
                 <p className="text-xs uppercase tracking-[0.12em] text-graphite/62">
-                  Repair Code
+                  {t.resultRepairCode}
                 </p>
                 <p className="mt-1 text-sm font-medium text-graphite">
                   {result.repairCode}
@@ -220,7 +229,7 @@ export default function RepairTrackPage() {
               </div>
               <div>
                 <p className="text-xs uppercase tracking-[0.12em] text-graphite/62">
-                  Item
+                  {t.resultItem}
                 </p>
                 <p className="mt-1 text-sm font-medium text-graphite">
                   {result.brand} {result.model}
@@ -228,7 +237,7 @@ export default function RepairTrackPage() {
               </div>
               <div>
                 <p className="text-xs uppercase tracking-[0.12em] text-graphite/62">
-                  Current Status
+                  {t.resultCurrentStatus}
                 </p>
                 <p className="mt-1 text-sm font-medium text-graphite">
                   {statusLabel(result.currentStatus)}
@@ -236,12 +245,12 @@ export default function RepairTrackPage() {
               </div>
               <div>
                 <p className="text-xs uppercase tracking-[0.12em] text-graphite/62">
-                  Estimated Completion
+                  {t.resultEstimatedCompletion}
                 </p>
                 <p className="mt-1 text-sm font-medium text-graphite">
                   {result.estimatedCompletion
                     ? new Date(result.estimatedCompletion).toLocaleDateString()
-                    : "Pending"}
+                    : t.resultPending}
                 </p>
               </div>
             </div>
@@ -253,7 +262,7 @@ export default function RepairTrackPage() {
             ) : null}
 
             <div className="space-y-3">
-              <h2 className="text-2xl text-graphite">Timeline</h2>
+              <h2 className="text-2xl text-graphite">{t.timelineTitle}</h2>
               <ol className="space-y-2">
                 {result.timeline.map((event, index) => (
                   <li
@@ -277,8 +286,8 @@ export default function RepairTrackPage() {
             </div>
 
             <p className="text-sm text-graphite/76">
-              Amount due:{" "}
-              {result.amountDue === null ? "To be confirmed" : formatEur(result.amountDue)}
+              {t.amountDue}:{" "}
+              {result.amountDue === null ? t.pendingAmount : formatEur(result.amountDue)}
             </p>
           </section>
         ) : null}

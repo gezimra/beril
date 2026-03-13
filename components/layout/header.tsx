@@ -1,12 +1,13 @@
 "use client";
 
-import { ShoppingBag, UserRound } from "lucide-react";
+import { Heart, LayoutDashboard, ShoppingBag, UserRound } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { startTransition } from "react";
+import { startTransition, useEffect, useRef, useState } from "react";
 
 import { BrandMark } from "@/components/layout/brand-mark";
 import { useCart } from "@/components/commerce/cart-provider";
+import { useWishlist } from "@/components/commerce/wishlist-provider";
 import { MobileNav } from "@/components/layout/mobile-nav";
 import { SearchDrawer } from "@/components/layout/search-drawer";
 import type { CustomerAccountUser } from "@/lib/db/customer-account";
@@ -26,6 +27,7 @@ interface HeaderProps {
   watchBrands: string[];
   eyewearBrands: string[];
   locale: Locale;
+  isAdmin?: boolean;
 }
 
 interface CatalogDropdownProps {
@@ -63,7 +65,7 @@ function CatalogDropdown({
         {label}
       </Link>
       {topBrands.length > 0 ? (
-        <div className="pointer-events-none absolute left-0 top-full z-50 pt-2 opacity-0 transition duration-150 group-hover:pointer-events-auto group-hover:opacity-100 group-focus-within:pointer-events-auto group-focus-within:opacity-100">
+        <div className="pointer-events-none absolute left-0 top-full z-50 pt-2 opacity-0 transition duration-150 group-hover:pointer-events-auto group-hover:opacity-100">
           <div className="min-w-[13.5rem] rounded-[var(--radius-card-inner)] border border-graphite/14 bg-ivory/98 p-3 shadow-[0_24px_48px_-30px_rgba(44,44,44,0.55)]">
             <Link
               href={href}
@@ -113,7 +115,7 @@ function ServiceDropdown({
       >
         {label}
       </Link>
-      <div className="pointer-events-none absolute left-0 top-full z-50 pt-2 opacity-0 transition duration-150 group-hover:pointer-events-auto group-hover:opacity-100 group-focus-within:pointer-events-auto group-focus-within:opacity-100">
+      <div className="pointer-events-none absolute left-0 top-full z-50 pt-2 opacity-0 transition duration-150 group-hover:pointer-events-auto group-hover:opacity-100">
         <div className="min-w-[14rem] rounded-[var(--radius-card-inner)] border border-graphite/14 bg-ivory/98 p-3 shadow-[0_24px_48px_-30px_rgba(44,44,44,0.55)]">
           <ul className="space-y-1">
             {links.map((entry) => (
@@ -171,13 +173,37 @@ export function Header({
   watchBrands,
   eyewearBrands,
   locale,
+  isAdmin,
 }: HeaderProps) {
   const pathname = usePathname();
   const signedIn = Boolean(customerUser);
+  const [hidden, setHidden] = useState(false);
+  const lastScrollY = useRef(0);
+
+  useEffect(() => {
+    const getScrollY = () =>
+      window.scrollY || document.documentElement.scrollTop || document.body.scrollTop;
+
+    const onScroll = () => {
+      const currentScrollY = getScrollY();
+      if (currentScrollY < 80) {
+        setHidden(false);
+      } else if (currentScrollY > lastScrollY.current) {
+        setHidden(true);
+      } else {
+        setHidden(false);
+      }
+      lastScrollY.current = currentScrollY;
+    };
+    document.addEventListener("scroll", onScroll, { passive: true });
+    return () => document.removeEventListener("scroll", onScroll);
+  }, []);
   const messages = getMessages(locale);
   const mainNavItems = getMainNavItems(locale);
-  const { items } = useCart();
+  const { items, openCart } = useCart();
   const cartItemsCount = items.length;
+  const { items: wishlistItems } = useWishlist();
+  const wishlistCount = wishlistItems.length;
   const cartBadge = cartItemsCount > 9 ? "9+" : String(cartItemsCount);
 
   const handleLocaleChange = (nextLocale: Locale) => {
@@ -192,7 +218,7 @@ export function Header({
   };
 
   return (
-    <header className="sticky top-0 z-40 overflow-x-clip border-b border-graphite/10 bg-ivory/85 backdrop-blur-md">
+    <header className={["fixed inset-x-0 top-0 z-40 border-b border-graphite/10 bg-ivory/85 backdrop-blur-md transition-transform duration-300", hidden ? "-translate-y-full" : "translate-y-0"].join(" ")}>
       <div className="mx-auto w-full px-2 py-2 sm:px-6 lg:px-8 xl:px-10">
         <div className="hidden min-h-20 grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-4 lg:grid">
           <BrandMark className="shrink-0" locale={locale} />
@@ -263,7 +289,20 @@ export function Header({
             <LanguageSwitcher locale={locale} onChange={handleLocaleChange} />
             <SearchDrawer compact triggerClassName="icon-button" locale={locale} />
             <Link
-              href="/cart"
+              href="/wishlist"
+              aria-label={messages.wishlist.navAria}
+              className="icon-button relative"
+            >
+              <Heart className="h-4 w-4" />
+              {wishlistCount > 0 ? (
+                <span className="absolute right-0 top-0 inline-flex h-5 w-5 -translate-y-1/4 translate-x-1/4 items-center justify-center rounded-full bg-walnut text-[0.52rem] font-medium leading-none text-white sm:-right-1.5 sm:-top-1.5 sm:translate-x-0 sm:translate-y-0">
+                  {wishlistCount > 9 ? "9+" : String(wishlistCount)}
+                </span>
+              ) : null}
+            </Link>
+            <button
+              type="button"
+              onClick={openCart}
               aria-label={messages.header.cartAria}
               className="icon-button relative"
             >
@@ -273,7 +312,7 @@ export function Header({
                   {cartBadge}
                 </span>
               ) : null}
-            </Link>
+            </button>
             <Link
               href="/account"
               aria-label={messages.header.accountAria}
@@ -289,7 +328,15 @@ export function Header({
                 <span className="absolute right-1.5 top-1.5 h-2 w-2 rounded-full bg-mineral" />
               ) : null}
             </Link>
-
+            {isAdmin ? (
+              <Link
+                href="/admin"
+                aria-label="Admin panel"
+                className="icon-button border-walnut/30 bg-walnut/10 text-walnut hover:bg-walnut/16"
+              >
+                <LayoutDashboard className="h-4 w-4" />
+              </Link>
+            ) : null}
           </div>
         </div>
 
@@ -298,7 +345,20 @@ export function Header({
           <div className="ml-auto flex shrink-0 items-center gap-0.5">
             <SearchDrawer compact triggerClassName="icon-button h-8 w-8" locale={locale} />
             <Link
-              href="/cart"
+              href="/wishlist"
+              aria-label={messages.wishlist.navAria}
+              className="icon-button relative h-8 w-8"
+            >
+              <Heart className="h-4 w-4" />
+              {wishlistCount > 0 ? (
+                <span className="absolute right-0 top-0 inline-flex h-4 w-4 -translate-y-1/4 items-center justify-center rounded-full bg-walnut text-[0.48rem] font-medium leading-none text-white">
+                  {wishlistCount > 9 ? "9+" : String(wishlistCount)}
+                </span>
+              ) : null}
+            </Link>
+            <button
+              type="button"
+              onClick={openCart}
               aria-label={messages.header.cartAria}
               className="icon-button relative h-8 w-8"
             >
@@ -308,7 +368,7 @@ export function Header({
                   {cartBadge}
                 </span>
               ) : null}
-            </Link>
+            </button>
             <MobileNav
               items={mainNavItems}
               customerUser={customerUser}

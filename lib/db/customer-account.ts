@@ -182,6 +182,12 @@ async function linkCustomerAuthToProfile(input: {
   if (ownershipError) {
     throw new Error(ownershipError.message);
   }
+
+  // Intentionally no phone-based auto-linking. Phone numbers at checkout are
+  // self-reported and unverified — a typo or shared family phone would silently
+  // attach someone else's orders to this account. Email is safe to auto-link
+  // because Supabase verifies ownership during signup. Phone-only orders can
+  // be looked up via /orders/track instead.
 }
 
 export async function registerCustomerAccount(input: {

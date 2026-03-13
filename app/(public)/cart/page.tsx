@@ -4,46 +4,37 @@ import Image from "next/image";
 import Link from "next/link";
 
 import { useCart } from "@/components/commerce/cart-provider";
+import { Button, buttonVariants } from "@/components/ui/button";
 import { Container } from "@/components/layout/container";
 import { SectionWrapper } from "@/components/layout/section-wrapper";
 import { StatusBadge } from "@/components/ui/status-badge";
+import { getCurrentLocale, getMessages } from "@/lib/i18n";
 import { formatEur } from "@/lib/utils/money";
 import { getProductImageUrl } from "@/lib/utils/product-image";
 
 export default function CartPage() {
-  const { items, subtotal, itemCount, updateQuantity, removeItem, clearCart } =
-    useCart();
-
-  const deliveryEstimate = itemCount > 0 ? "2-4 dite pune" : "-";
+  const { items, subtotal, itemCount, updateQuantity, removeItem, clearCart } = useCart();
+  const messages = getMessages(getCurrentLocale());
+  const t = messages.cart;
 
   return (
     <SectionWrapper className="py-16">
       <Container className="space-y-8">
         <header className="space-y-4">
-          <StatusBadge tone="premium">Shporta</StatusBadge>
-          <h1 className="text-5xl text-graphite sm:text-6xl">Shporta Juaj</h1>
-          <p className="text-sm text-graphite/75 sm:text-base">
-            Rishiko produktet e zgjedhura para porosise.
-          </p>
+          <StatusBadge tone="premium">{t.badge}</StatusBadge>
+          <h1 className="text-5xl text-graphite sm:text-6xl">{t.title}</h1>
+          <p className="text-sm text-graphite/75 sm:text-base">{t.subtitle}</p>
         </header>
 
         {items.length === 0 ? (
           <div className="surface-panel p-8">
-            <p className="text-sm text-graphite/74">
-              Shporta eshte bosh. Shfleto oret dhe syzet per te shtuar produkte.
-            </p>
+            <p className="text-sm text-graphite/74">{t.empty}</p>
             <div className="mt-5 flex flex-wrap gap-3">
-              <Link
-                href="/watches"
-                className="inline-flex h-11 items-center rounded-full bg-walnut px-5 text-sm font-medium text-white"
-              >
-                Shfleto Oret
+              <Link href="/watches" className={buttonVariants({ variant: "primary" })}>
+                {t.browseWatches}
               </Link>
-              <Link
-                href="/eyewear"
-                className="inline-flex h-11 items-center rounded-full border border-graphite/20 bg-white/75 px-5 text-sm font-medium text-graphite"
-              >
-                Shfleto Syzet
+              <Link href="/eyewear" className={buttonVariants({ variant: "secondary" })}>
+                {t.browseEyewear}
               </Link>
             </div>
           </div>
@@ -86,7 +77,7 @@ export default function CartPage() {
                             onClick={() =>
                               updateQuantity(item.productId, item.quantity - 1)
                             }
-                            className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-graphite/18 bg-white/80 text-sm"
+                            className="inline-flex h-9 w-9 cursor-pointer items-center justify-center rounded-full border border-graphite/18 bg-white/80 text-sm transition hover:bg-white hover:shadow-sm"
                           >
                             -
                           </button>
@@ -98,7 +89,7 @@ export default function CartPage() {
                             onClick={() =>
                               updateQuantity(item.productId, item.quantity + 1)
                             }
-                            className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-graphite/18 bg-white/80 text-sm"
+                            className="inline-flex h-9 w-9 cursor-pointer items-center justify-center rounded-full border border-graphite/18 bg-white/80 text-sm transition hover:bg-white hover:shadow-sm"
                           >
                             +
                           </button>
@@ -107,7 +98,7 @@ export default function CartPage() {
                             onClick={() => removeItem(item.productId)}
                             className="ml-2 text-xs uppercase tracking-[0.12em] text-graphite/62 hover:text-graphite"
                           >
-                            Largo
+                            {t.remove}
                           </button>
                         </div>
                       </div>
@@ -118,34 +109,39 @@ export default function CartPage() {
             </section>
 
             <aside className="surface-panel h-fit p-5">
-              <h2 className="text-2xl text-graphite">Permbledhje</h2>
+              <h2 className="text-2xl text-graphite">{t.summaryTitle}</h2>
               <dl className="mt-4 space-y-2 text-sm text-graphite/78">
                 <div className="flex items-center justify-between">
-                  <dt>Artikuj</dt>
+                  <dt>{t.items}</dt>
                   <dd>{itemCount}</dd>
                 </div>
                 <div className="flex items-center justify-between">
-                  <dt>Nentotali</dt>
+                  <dt>{t.subtotal}</dt>
                   <dd>{formatEur(subtotal)}</dd>
                 </div>
                 <div className="flex items-center justify-between">
-                  <dt>Koha e dergeses</dt>
-                  <dd>{deliveryEstimate}</dd>
+                  <dt>{t.deliveryEstimate}</dt>
+                  <dd>{itemCount > 0 ? t.deliveryDays : "-"}</dd>
                 </div>
               </dl>
-              <Link
-                href="/checkout"
-                className="mt-5 inline-flex h-11 w-full items-center justify-center rounded-full bg-walnut px-5 text-sm font-medium text-white"
-              >
-                Vazhdo ne Pagese
+              <Link href="/checkout" className={buttonVariants({ variant: "primary", className: "mt-5 w-full" })}>
+                {t.checkout}
               </Link>
-              <button
-                type="button"
+              <Button
+                variant="secondary"
                 onClick={clearCart}
-                className="mt-2 inline-flex h-10 w-full items-center justify-center rounded-full border border-graphite/18 bg-white/75 px-5 text-xs uppercase tracking-[0.12em] text-graphite"
+                className="mt-2 w-full text-xs uppercase tracking-[0.12em]"
               >
-                Pastro Shporten
-              </button>
+                {t.clearCart}
+              </Button>
+              <div className="mt-4 border-t border-graphite/10 pt-4">
+                <Link
+                  href="/watches"
+                  className="text-xs uppercase tracking-[0.12em] text-graphite/60 transition hover:text-graphite"
+                >
+                  ← {t.continueShopping}
+                </Link>
+              </div>
             </aside>
           </div>
         )}

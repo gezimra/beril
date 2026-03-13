@@ -1,3 +1,4 @@
+import { sendOrderConfirmationEmail } from "@/lib/email/order-confirmation";
 import { getAllActiveProducts } from "@/lib/db/catalog";
 import {
   addCustomerActivity,
@@ -256,7 +257,8 @@ export async function createOrder({
     throw new Error(historyError.message);
   }
 
-  await syncOrderCashbookByOrderId(String(orderData.id));
+  // Non-critical: cashbook sync failure must not block order creation.
+  await syncOrderCashbookByOrderId(String(orderData.id)).catch(() => {});
 
   if (couponValidation?.valid && couponValidation.couponId && discountAmount > 0) {
     await recordCouponRedemption({
@@ -349,6 +351,28 @@ export async function createOrder({
     orderTotal: total,
   });
 
+  // Non-critical: email failure must never block order creation.
+  if (resolvedCustomerEmail) {
+    sendOrderConfirmationEmail({
+      to: resolvedCustomerEmail,
+      locale: checkout.locale ?? "sq",
+      customerName: resolvedCustomerName || checkout.customerName,
+      orderCode,
+      items: resolvedItems.map((entry) => ({
+        title: entry.product.title,
+        brand: entry.product.brand,
+        quantity: entry.quantity,
+        unitPrice: entry.unitPrice,
+      })),
+      subtotal,
+      deliveryFee,
+      discountAmount,
+      total,
+      deliveryMethod: checkout.deliveryMethod,
+      paymentMethod: checkout.paymentMethod,
+    }).catch(() => {});
+  }
+
   return {
     orderCode,
     subtotal,
@@ -358,5 +382,95 @@ export async function createOrder({
     couponCodeApplied: couponValidation?.code ?? null,
     paymentStatus,
     paymentTransactionId: paymentTransaction.id,
+  };
+}
+
+export interface GuestOrderTrackResult {
+  orderCode: string;
+  customerName: string;
+  orderStatus: string;
+  paymentStatus: string;
+  paymentMethod: string;
+  deliveryMethod: string;
+  subtotal: number;
+  deliveryFee: number;
+  discountAmount: number;
+  total: number;
+  createdAt: string;
+  items: Array<{ title: string; brand: string; quantity: number; unitPrice: number }>;
+  history: Array<{ status: string; note: string | null; createdAt: string }>;
+}
+
+export async function trackGuestOrder(input: {
+  orderCode: string;
+  phoneOrEmail: string;
+}): Promise<GuestOrderTrackResult | null> {
+  const serviceClient = createSupabaseServiceClient();
+  if (!serviceClient) {
+    return null;
+  }
+
+  const { data: order, error } = await serviceClient
+    .from("orders")
+    .select(
+      `id, order_code, customer_name, order_status, payment_status, payment_method,
+       delivery_method, subtotal, delivery_fee, discount_amount, total, created_at,
+       phone_normalized, email_normalized,
+       order_items(product_title_snapshot, product_brand_snapshot, quantity, unit_price),
+       order_status_history(status, note, created_at)`,
+    )
+    .eq("order_code", input.orderCode.trim().toUpperCase())
+    .maybeSingle();
+
+  if (error || !order) {
+    return null;
+  }
+
+  const normalized = input.phoneOrEmail.includes("@")
+    ? normalizeEmail(input.phoneOrEmail)
+    : normalizePhone(input.phoneOrEmail);
+
+  const row = order as Record<string, unknown>;
+
+  const canView =
+    normalized === row.phone_normalized || normalized === row.email_normalized;
+
+  if (!canView) {
+    return null;
+  }
+
+  const items = ((row.order_items as Array<Record<string, unknown>> | null) ?? []).map(
+    (item) => ({
+      title: String(item.product_title_snapshot),
+      brand: String(item.product_brand_snapshot),
+      quantity: Number(item.quantity),
+      unitPrice: Number(item.unit_price),
+    }),
+  );
+
+  const history = (
+    (row.order_status_history as Array<Record<string, unknown>> | null) ?? []
+  )
+    .map((event) => ({
+      status: String(event.status),
+      note: (event.note as string | null) ?? null,
+      createdAt: String(event.created_at),
+    }))
+    .sort((a, b) => Date.parse(a.createdAt) - Date.parse(b.createdAt));
+
+  return {
+    orderCode: String(row.order_code),
+    customerName: String(row.customer_name),
+    orderStatus: String(row.order_status),
+    paymentStatus: String(row.payment_status),
+    paymentMethod: String(row.payment_method),
+    deliveryMethod: String(row.delivery_method),
+    subtotal: Number(row.subtotal),
+    deliveryFee: Number(row.delivery_fee),
+    discountAmount: Number(row.discount_amount ?? 0),
+    total: Number(row.total),
+    createdAt: String(row.created_at),
+    items,
+    history,
   };
 }

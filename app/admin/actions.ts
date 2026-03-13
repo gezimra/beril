@@ -3,6 +3,9 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 
+import { verifyAdminSession } from "@/lib/admin-auth";
+import { validateUploadFile, getFileBytes, MAX_UPLOAD_SIZE_BYTES } from "@/lib/admin-upload";
+
 import {
   addAdminRepairAttachment,
   deleteAdminHeroSlide,
@@ -635,7 +638,6 @@ const upsertAffiliatePayoutSchema = z.object({
   reference: z.string().trim().optional(),
 });
 
-const maxUploadSizeBytes = 8 * 1024 * 1024;
 
 function parseSpecsRaw(specsRaw?: string) {
   if (!specsRaw) {
@@ -748,6 +750,7 @@ function getStringArraySetting(
 }
 
 export async function updateOrderStatusAction(formData: FormData) {
+  await verifyAdminSession();
   const payload = updateOrderStatusSchema.parse({
     orderId: formData.get("orderId"),
     status: formData.get("status"),
@@ -761,6 +764,7 @@ export async function updateOrderStatusAction(formData: FormData) {
 }
 
 export async function updateOrderPaymentStatusAction(formData: FormData) {
+  await verifyAdminSession();
   const payload = updateOrderPaymentStatusSchema.parse({
     orderId: formData.get("orderId"),
     paymentStatus: formData.get("paymentStatus"),
@@ -773,6 +777,7 @@ export async function updateOrderPaymentStatusAction(formData: FormData) {
 }
 
 export async function updateOrderNotesAction(formData: FormData) {
+  await verifyAdminSession();
   const payload = updateOrderNotesSchema.parse({
     orderId: formData.get("orderId"),
     internalNotes: formData.get("internalNotes"),
@@ -783,6 +788,7 @@ export async function updateOrderNotesAction(formData: FormData) {
 }
 
 export async function updateRepairStatusAction(formData: FormData) {
+  await verifyAdminSession();
   const payload = updateRepairStatusSchema.parse({
     repairId: formData.get("repairId"),
     status: formData.get("status"),
@@ -801,6 +807,7 @@ export async function updateRepairStatusAction(formData: FormData) {
 }
 
 export async function updateRepairNotesAction(formData: FormData) {
+  await verifyAdminSession();
   const payload = updateRepairNotesSchema.parse({
     repairId: formData.get("repairId"),
     internalNotes: formData.get("internalNotes"),
@@ -816,6 +823,7 @@ export async function updateRepairNotesAction(formData: FormData) {
 }
 
 export async function updateRepairEstimateAction(formData: FormData) {
+  await verifyAdminSession();
   const payload = updateRepairEstimateSchema.parse({
     repairId: formData.get("repairId"),
     estimatedCompletion: formData.get("estimatedCompletion"),
@@ -831,6 +839,7 @@ export async function updateRepairEstimateAction(formData: FormData) {
 }
 
 export async function upsertProductAction(formData: FormData) {
+  await verifyAdminSession();
   const payload = upsertProductSchema.parse({
     id: formData.get("id") || undefined,
     title: formData.get("title"),
@@ -873,6 +882,7 @@ export async function upsertProductAction(formData: FormData) {
 }
 
 export async function saveSiteSettingsAction(formData: FormData) {
+  await verifyAdminSession();
   const scalarKeys = [
     "business.name",
     "hero.headline",
@@ -926,17 +936,20 @@ export async function saveSiteSettingsAction(formData: FormData) {
 }
 
 export async function uploadRepairAttachmentAction(formData: FormData) {
+  await verifyAdminSession();
   const payload = uploadRepairAttachmentSchema.parse({
     repairId: formData.get("repairId"),
     fileLabel: formData.get("fileLabel"),
   });
 
-  const file = formData.get("attachment");
-  if (!(file instanceof File) || file.size === 0 || file.size > maxUploadSizeBytes) {
-    return;
+  const rawFile = formData.get("attachment");
+  const validation = validateUploadFile(rawFile);
+  if (!validation.success) {
+    throw new Error(validation.error);
   }
+  const file = rawFile as File;
 
-  const fileBytes = new Uint8Array(await file.arrayBuffer());
+  const fileBytes = await getFileBytes(file);
   await addAdminRepairAttachment({
     repairId: payload.repairId,
     fileName: file.name,
@@ -949,6 +962,7 @@ export async function uploadRepairAttachmentAction(formData: FormData) {
 }
 
 export async function upsertJournalPostAction(formData: FormData) {
+  await verifyAdminSession();
   const payload = upsertJournalPostSchema.parse({
     id: formData.get("id") || undefined,
     title: formData.get("title"),
@@ -966,16 +980,19 @@ export async function upsertJournalPostAction(formData: FormData) {
 }
 
 export async function uploadJournalCoverImageAction(formData: FormData) {
+  await verifyAdminSession();
   const payload = uploadJournalCoverSchema.parse({
     journalId: formData.get("journalId"),
   });
 
-  const file = formData.get("coverImage");
-  if (!(file instanceof File) || file.size === 0 || file.size > maxUploadSizeBytes) {
-    return;
+  const rawFile = formData.get("coverImage");
+  const validation = validateUploadFile(rawFile, { requireImage: true });
+  if (!validation.success) {
+    throw new Error(validation.error);
   }
+  const file = rawFile as File;
 
-  const fileBytes = new Uint8Array(await file.arrayBuffer());
+  const fileBytes = await getFileBytes(file);
   await uploadAdminJournalCoverImage({
     journalId: payload.journalId,
     fileName: file.name,
@@ -989,21 +1006,20 @@ export async function uploadJournalCoverImageAction(formData: FormData) {
 }
 
 export async function uploadProductPrimaryImageAction(formData: FormData) {
+  await verifyAdminSession();
   const payload = uploadProductPrimaryImageSchema.parse({
     productId: formData.get("productId"),
     imageAlt: formData.get("imageAlt") || undefined,
   });
 
-  const file = formData.get("primaryImageFile");
-  if (!(file instanceof File) || file.size === 0 || file.size > maxUploadSizeBytes) {
-    return;
+  const rawFile = formData.get("primaryImageFile");
+  const validation = validateUploadFile(rawFile, { requireImage: true });
+  if (!validation.success) {
+    throw new Error(validation.error);
   }
+  const file = rawFile as File;
 
-  if (!file.type.startsWith("image/")) {
-    return;
-  }
-
-  const fileBytes = new Uint8Array(await file.arrayBuffer());
+  const fileBytes = await getFileBytes(file);
   await uploadAdminProductPrimaryImage({
     productId: payload.productId,
     imageAlt: payload.imageAlt ?? null,
@@ -1021,21 +1037,20 @@ export async function uploadProductPrimaryImageAction(formData: FormData) {
 }
 
 export async function uploadProductGalleryImageAction(formData: FormData) {
+  await verifyAdminSession();
   const payload = uploadProductGalleryImageSchema.parse({
     productId: formData.get("productId"),
     imageAlt: formData.get("imageAlt") || undefined,
   });
 
-  const file = formData.get("galleryImageFile");
-  if (!(file instanceof File) || file.size === 0 || file.size > maxUploadSizeBytes) {
-    return;
+  const rawFile = formData.get("galleryImageFile");
+  const validation = validateUploadFile(rawFile, { requireImage: true });
+  if (!validation.success) {
+    throw new Error(validation.error);
   }
+  const file = rawFile as File;
 
-  if (!file.type.startsWith("image/")) {
-    return;
-  }
-
-  const fileBytes = new Uint8Array(await file.arrayBuffer());
+  const fileBytes = await getFileBytes(file);
   await uploadAdminProductGalleryImage({
     productId: payload.productId,
     imageAlt: payload.imageAlt ?? null,
@@ -1053,20 +1068,19 @@ export async function uploadProductGalleryImageAction(formData: FormData) {
 }
 
 export async function uploadSiteImageAction(formData: FormData) {
+  await verifyAdminSession();
   const payload = uploadSiteImageSchema.parse({
     settingKey: formData.get("settingKey"),
   });
 
-  const file = formData.get("siteImageFile");
-  if (!(file instanceof File) || file.size === 0 || file.size > maxUploadSizeBytes) {
-    return;
+  const rawFile = formData.get("siteImageFile");
+  const validation = validateUploadFile(rawFile, { requireImage: true });
+  if (!validation.success) {
+    throw new Error(validation.error);
   }
+  const file = rawFile as File;
 
-  if (!file.type.startsWith("image/")) {
-    return;
-  }
-
-  const fileBytes = new Uint8Array(await file.arrayBuffer());
+  const fileBytes = await getFileBytes(file);
   await uploadAdminSiteImage({
     settingKey: payload.settingKey,
     fileName: file.name,
@@ -1080,6 +1094,7 @@ export async function uploadSiteImageAction(formData: FormData) {
 }
 
 export async function upsertCampaignAction(formData: FormData) {
+  await verifyAdminSession();
   const payload = upsertCampaignSchema.parse({
     id: formData.get("id") || undefined,
     name: formData.get("name"),
@@ -1096,6 +1111,7 @@ export async function upsertCampaignAction(formData: FormData) {
 }
 
 export async function upsertPromotionAction(formData: FormData) {
+  await verifyAdminSession();
   const payload = upsertPromotionSchema.parse({
     id: formData.get("id") || undefined,
     campaignId: formData.get("campaignId") || undefined,
@@ -1120,6 +1136,7 @@ export async function upsertPromotionAction(formData: FormData) {
 }
 
 export async function upsertCouponAction(formData: FormData) {
+  await verifyAdminSession();
   const payload = upsertCouponSchema.parse({
     id: formData.get("id") || undefined,
     promotionId: formData.get("promotionId"),
@@ -1136,6 +1153,7 @@ export async function upsertCouponAction(formData: FormData) {
 }
 
 export async function assignCouponToCustomerAction(formData: FormData) {
+  await verifyAdminSession();
   const payload = assignCouponToCustomerSchema.parse({
     couponId: formData.get("couponId"),
     customerEmail: formData.get("customerEmail"),
@@ -1158,6 +1176,7 @@ export async function assignCouponToCustomerAction(formData: FormData) {
 }
 
 export async function updatePaymentTransactionStatusAction(formData: FormData) {
+  await verifyAdminSession();
   const payload = updatePaymentTransactionSchema.parse({
     transactionId: formData.get("transactionId"),
     status: formData.get("status"),
@@ -1176,6 +1195,7 @@ export async function updatePaymentTransactionStatusAction(formData: FormData) {
 }
 
 export async function createSupportThreadAction(formData: FormData) {
+  await verifyAdminSession();
   const payload = createSupportThreadSchema.parse({
     subject: formData.get("subject"),
     message: formData.get("message"),
@@ -1198,6 +1218,7 @@ export async function createSupportThreadAction(formData: FormData) {
 }
 
 export async function createSupportMessageAction(formData: FormData) {
+  await verifyAdminSession();
   const payload = createSupportMessageSchema.parse({
     threadId: formData.get("threadId"),
     direction: formData.get("direction"),
@@ -1220,6 +1241,7 @@ export async function createSupportMessageAction(formData: FormData) {
 }
 
 export async function updateSupportThreadStatusAction(formData: FormData) {
+  await verifyAdminSession();
   const payload = updateSupportThreadStatusSchema.parse({
     threadId: formData.get("threadId"),
     status: formData.get("status"),
@@ -1230,6 +1252,7 @@ export async function updateSupportThreadStatusAction(formData: FormData) {
 }
 
 export async function upsertNotificationTemplateAction(formData: FormData) {
+  await verifyAdminSession();
   const payload = upsertNotificationTemplateSchema.parse({
     id: formData.get("id") || undefined,
     key: formData.get("key"),
@@ -1248,6 +1271,7 @@ export async function upsertNotificationTemplateAction(formData: FormData) {
 }
 
 export async function queueNotificationJobAction(formData: FormData) {
+  await verifyAdminSession();
   const payload = queueNotificationJobSchema.parse({
     templateId: formData.get("templateId") || undefined,
     customerProfileId: formData.get("customerProfileId") || undefined,
@@ -1269,6 +1293,7 @@ export async function queueNotificationJobAction(formData: FormData) {
 }
 
 export async function upsertSupplierAction(formData: FormData) {
+  await verifyAdminSession();
   const returnTo = getAdminReturnPath(formData, "/admin/operations/inventory");
   const payload = upsertSupplierSchema.parse({
     id: formData.get("id") || undefined,
@@ -1288,6 +1313,7 @@ export async function upsertSupplierAction(formData: FormData) {
 }
 
 export async function upsertPurchaseOrderAction(formData: FormData) {
+  await verifyAdminSession();
   const returnTo = getAdminReturnPath(formData, "/admin/operations/inventory");
   const payload = upsertPurchaseOrderSchema.parse({
     id: formData.get("id") || undefined,
@@ -1310,6 +1336,7 @@ export async function upsertPurchaseOrderAction(formData: FormData) {
 }
 
 export async function createStockMovementAction(formData: FormData) {
+  await verifyAdminSession();
   const returnTo = getAdminReturnPath(formData, "/admin/operations/inventory");
   const payload = createStockMovementSchema.parse({
     productId: formData.get("productId") || undefined,
@@ -1333,6 +1360,7 @@ export async function createStockMovementAction(formData: FormData) {
 }
 
 export async function upsertInventoryItemAction(formData: FormData) {
+  await verifyAdminSession();
   const returnTo = getAdminReturnPath(formData, "/admin/operations/inventory");
   const payload = upsertInventoryItemSchema.parse({
     id: formData.get("id") || undefined,
@@ -1360,6 +1388,7 @@ export async function upsertInventoryItemAction(formData: FormData) {
 }
 
 export async function createCashbookEntryAction(formData: FormData) {
+  await verifyAdminSession();
   const returnTo = getAdminReturnPath(formData, "/admin/operations/cashbook");
   const payload = createCashbookEntrySchema.parse({
     entryDate: formData.get("entryDate") || undefined,
@@ -1378,6 +1407,7 @@ export async function createCashbookEntryAction(formData: FormData) {
 }
 
 export async function createManualOrderAction(formData: FormData) {
+  await verifyAdminSession();
   const returnTo = getAdminReturnPath(formData, "/admin/operations/front-desk");
   const itemProductIds = formData
     .getAll("itemProductId")
@@ -1437,6 +1467,7 @@ export async function createManualOrderAction(formData: FormData) {
 }
 
 export async function createManualRepairRequestAction(formData: FormData) {
+  await verifyAdminSession();
   const returnTo = getAdminReturnPath(formData, "/admin/operations/front-desk");
   const sharedPayload = createManualRepairRequestSharedSchema.parse({
     customerName: formData.get("customerName"),
@@ -1505,6 +1536,7 @@ export async function createManualRepairRequestAction(formData: FormData) {
 }
 
 export async function upsertWatchBrandAction(formData: FormData) {
+  await verifyAdminSession();
   const returnTo = getAdminReturnPath(formData, "/admin/operations/watch-db");
   const payload = upsertWatchBrandSchema.parse({
     id: formData.get("id") || undefined,
@@ -1524,6 +1556,7 @@ export async function upsertWatchBrandAction(formData: FormData) {
 }
 
 export async function upsertWatchCaliberAction(formData: FormData) {
+  await verifyAdminSession();
   const returnTo = getAdminReturnPath(formData, "/admin/operations/watch-db");
   const payload = upsertWatchCaliberSchema.parse({
     id: formData.get("id") || undefined,
@@ -1551,6 +1584,7 @@ export async function upsertWatchCaliberAction(formData: FormData) {
 }
 
 export async function upsertWatchModelAction(formData: FormData) {
+  await verifyAdminSession();
   const returnTo = getAdminReturnPath(formData, "/admin/operations/watch-db");
   const payload = upsertWatchModelSchema.parse({
     id: formData.get("id") || undefined,
@@ -1570,6 +1604,7 @@ export async function upsertWatchModelAction(formData: FormData) {
 }
 
 export async function upsertWatchReferenceAction(formData: FormData) {
+  await verifyAdminSession();
   const returnTo = getAdminReturnPath(formData, "/admin/operations/watch-db");
   const payload = upsertWatchReferenceSchema.parse({
     id: formData.get("id") || undefined,
@@ -1597,6 +1632,7 @@ export async function upsertWatchReferenceAction(formData: FormData) {
 }
 
 export async function upsertInventoryCompatibilityAction(formData: FormData) {
+  await verifyAdminSession();
   const returnTo = getAdminReturnPath(formData, "/admin/operations/watch-db");
   const payload = upsertInventoryCompatibilitySchema.parse({
     id: formData.get("id") || undefined,
@@ -1618,6 +1654,7 @@ export async function upsertInventoryCompatibilityAction(formData: FormData) {
 }
 
 export async function createRepairPartUsageAction(formData: FormData) {
+  await verifyAdminSession();
   const returnTo = getAdminReturnPath(formData, "/admin/operations/workshop");
   const usageWorkOrderIds = formData
     .getAll("usageWorkOrderId")
@@ -1664,6 +1701,7 @@ export async function createRepairPartUsageAction(formData: FormData) {
 }
 
 export async function upsertWorkOrderAction(formData: FormData) {
+  await verifyAdminSession();
   const returnTo = getAdminReturnPath(formData, "/admin/operations/workshop");
   const payload = upsertWorkOrderSchema.parse({
     id: formData.get("id") || undefined,
@@ -1686,6 +1724,7 @@ export async function upsertWorkOrderAction(formData: FormData) {
 }
 
 export async function upsertLoyaltyRuleAction(formData: FormData) {
+  await verifyAdminSession();
   const payload = upsertLoyaltyRuleSchema.parse({
     id: formData.get("id") || undefined,
     name: formData.get("name"),
@@ -1703,6 +1742,7 @@ export async function upsertLoyaltyRuleAction(formData: FormData) {
 }
 
 export async function upsertAffiliateAction(formData: FormData) {
+  await verifyAdminSession();
   const payload = upsertAffiliateSchema.parse({
     id: formData.get("id") || undefined,
     name: formData.get("name"),
@@ -1721,6 +1761,7 @@ export async function upsertAffiliateAction(formData: FormData) {
 }
 
 export async function upsertAffiliatePayoutAction(formData: FormData) {
+  await verifyAdminSession();
   const payload = upsertAffiliatePayoutSchema.parse({
     id: formData.get("id") || undefined,
     affiliateId: formData.get("affiliateId"),
@@ -1764,6 +1805,7 @@ const uploadHeroSlideImageSchema = z.object({
 });
 
 export async function upsertHeroSlideAction(formData: FormData) {
+  await verifyAdminSession();
   const payload = upsertHeroSlideSchema.parse({
     id: formData.get("id") || undefined,
     slideType: formData.get("slideType"),
@@ -1804,14 +1846,14 @@ export async function upsertHeroSlideAction(formData: FormData) {
   const uploadTargets = ["backgroundImage", "videoPoster", "video"] as const;
   for (const field of uploadTargets) {
     const file = formData.get(`${field}File`);
-    if (!(file instanceof File) || file.size === 0 || file.size > maxUploadSizeBytes) {
+    if (!(file instanceof File) || file.size === 0 || file.size > MAX_UPLOAD_SIZE_BYTES) {
       continue;
     }
     const isVideo = field === "video";
     if (!file.type.startsWith(isVideo ? "video/" : "image/")) {
       continue;
     }
-    const fileBytes = new Uint8Array(await file.arrayBuffer());
+    const fileBytes = await getFileBytes(file as File);
     await uploadAdminHeroSlideImage({
       slideId,
       imageField: field,
@@ -1826,6 +1868,7 @@ export async function upsertHeroSlideAction(formData: FormData) {
 }
 
 export async function deleteHeroSlideAction(formData: FormData) {
+  await verifyAdminSession();
   const payload = deleteHeroSlideSchema.parse({
     slideId: formData.get("slideId"),
   });
@@ -1836,22 +1879,21 @@ export async function deleteHeroSlideAction(formData: FormData) {
 }
 
 export async function uploadHeroSlideImageAction(formData: FormData) {
+  await verifyAdminSession();
   const payload = uploadHeroSlideImageSchema.parse({
     slideId: formData.get("slideId"),
     imageField: formData.get("imageField"),
   });
 
-  const file = formData.get("imageFile");
-  if (!(file instanceof File) || file.size === 0 || file.size > maxUploadSizeBytes) {
-    return;
-  }
-
+  const rawFile = formData.get("imageFile");
   const isVideo = payload.imageField === "video";
-  if (!file.type.startsWith(isVideo ? "video/" : "image/")) {
-    return;
+  const validation = validateUploadFile(rawFile, { requireImage: !isVideo });
+  if (!validation.success) {
+    throw new Error(validation.error);
   }
+  const file = rawFile as File;
 
-  const fileBytes = new Uint8Array(await file.arrayBuffer());
+  const fileBytes = await getFileBytes(file);
   await uploadAdminHeroSlideImage({
     slideId: payload.slideId,
     imageField: payload.imageField,

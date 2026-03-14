@@ -5,6 +5,7 @@ import { Container } from "@/components/layout/container";
 import { ProductCard } from "@/components/product/product-card";
 import { SectionWrapper } from "@/components/layout/section-wrapper";
 import { StatusBadge } from "@/components/ui/status-badge";
+import { Pagination } from "@/components/ui/pagination";
 import { EyewearFilters } from "@/components/catalog/eyewear-filters";
 import {
   getCatalogFilterOptions,
@@ -36,9 +37,11 @@ export const metadata: Metadata = {
 };
 
 export default async function EyewearPage({ searchParams }: EyewearPageProps) {
-  const parsed = parseCatalogSearchParams(await searchParams);
-  const [products, options, messages] = await Promise.all([
-    listCatalogProducts("eyewear", parsed),
+  const raw = await searchParams;
+  const parsed = parseCatalogSearchParams(raw);
+  const page = Math.max(1, parseInt(Array.isArray(raw.page) ? (raw.page[0] ?? "1") : (raw.page ?? "1"), 10));
+  const [{ products, total, hasMore }, options, messages] = await Promise.all([
+    listCatalogProducts("eyewear", parsed, page),
     getCatalogFilterOptions("eyewear"),
     getServerMessages(),
   ]);
@@ -47,6 +50,9 @@ export default async function EyewearPage({ searchParams }: EyewearPageProps) {
   const activeFilterCount = Object.values(parsed).filter(
     (value) => value !== undefined && value !== null && value !== "" && value !== "newest",
   ).length;
+  const filterParams = Object.fromEntries(
+    Object.entries(parsed).filter(([, v]) => v !== undefined && v !== null).map(([k, v]) => [k, String(v)]),
+  ) as Record<string, string>;
 
   return (
     <SectionWrapper className="py-16">
@@ -59,9 +65,8 @@ export default async function EyewearPage({ searchParams }: EyewearPageProps) {
           </p>
         </header>
 
-        <div className="grid gap-7 xl:grid-cols-[18rem_minmax(0,1fr)]">
+        <div className="grid gap-7 xl:grid-cols-[18rem_minmax(0,1fr)] xl:items-start">
           <EyewearFilters
-            key={buildSearchParams(parsed)}
             initialValues={parsed}
             options={eyewearOptions}
             messages={messages.catalog.filters}
@@ -70,7 +75,7 @@ export default async function EyewearPage({ searchParams }: EyewearPageProps) {
           <section className="space-y-4">
             <div className="flex items-center justify-between">
               <p className="text-sm text-graphite/72">
-                {products.length} {messages.catalog.filters.productsCount}
+                {total} {messages.catalog.filters.productsCount}
                 {activeFilterCount > 0
                   ? ` | ${activeFilterCount} ${messages.catalog.filters.activeFilters}`
                   : ""}
@@ -104,6 +109,13 @@ export default async function EyewearPage({ searchParams }: EyewearPageProps) {
                 ))}
               </div>
             )}
+
+            <Pagination
+              page={page}
+              hasMore={hasMore}
+              searchParams={filterParams}
+              basePath="/eyewear"
+            />
           </section>
         </div>
       </Container>

@@ -1,6 +1,8 @@
 import { updatePaymentTransactionStatusAction } from "@/app/admin/actions";
 import { Container } from "@/components/layout/container";
+import { buttonVariants } from "@/components/ui/button";
 import { FloatInput, FloatSelect } from "@/components/ui/float-field";
+import { Pagination } from "@/components/ui/pagination";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { listAdminPaymentTransactions } from "@/lib/db/payments-promotions";
 import { formatStatusLabel } from "@/lib/utils/status-label";
@@ -23,7 +25,8 @@ export default async function AdminPaymentsPage({
   const query = await searchParams;
   const search = getQueryParam(query.search);
   const status = getQueryParam(query.status);
-  const transactions = await listAdminPaymentTransactions({ search, status });
+  const page = Math.max(1, parseInt(getQueryParam(query.page, "1"), 10));
+  const transactions = await listAdminPaymentTransactions({ search, status, page });
 
   return (
     <Container className="space-y-6">
@@ -55,7 +58,7 @@ export default async function AdminPaymentsPage({
         </FloatSelect>
         <button
           type="submit"
-          className="inline-flex h-10 items-center justify-center rounded-full bg-walnut px-5 text-xs uppercase tracking-[0.12em] text-white"
+          className={buttonVariants({ variant: "primary", size: "adminMd" })}
         >
           Apply
         </button>
@@ -110,7 +113,7 @@ export default async function AdminPaymentsPage({
                 />
                 <button
                   type="submit"
-                  className="inline-flex h-10 items-center justify-center rounded-full border border-graphite/18 bg-white/85 px-4 text-xs uppercase tracking-[0.12em] text-graphite"
+                  className={buttonVariants({ variant: "secondary", size: "adminMd" })}
                 >
                   Save
                 </button>
@@ -119,6 +122,13 @@ export default async function AdminPaymentsPage({
           ))
         )}
       </div>
+
+      <Pagination
+        page={page}
+        hasMore={transactions.length === 30}
+        searchParams={{ search: search || undefined, status: status || undefined }}
+        className="surface-panel p-4"
+      />
     </Container>
   );
 }

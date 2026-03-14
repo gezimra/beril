@@ -11,7 +11,10 @@ import type { AffiliateStatus, PayoutStatus, RewardType } from "@/types/domain";
 interface ListFilterParams {
   search?: string;
   status?: string;
+  page?: number;
 }
+
+const PAGE_SIZE_GROWTH = 30;
 
 interface UpsertLoyaltyRuleInput {
   id?: string;
@@ -143,17 +146,21 @@ export async function upsertAdminLoyaltyRule(input: UpsertLoyaltyRuleInput) {
 
 export async function listAdminLoyaltyAccounts({
   search,
+  page = 1,
 }: ListFilterParams = {}): Promise<AdminLoyaltyAccount[]> {
   const serviceClient = createSupabaseServiceClient();
   if (!serviceClient) {
     return fallbackAccounts.filter((account) => includesSearch(account.tier, search));
   }
 
+  const from = (page - 1) * PAGE_SIZE_GROWTH;
+  const to = from + PAGE_SIZE_GROWTH - 1;
+
   let query = serviceClient
     .from("loyalty_accounts")
     .select("id, customer_profile_id, points_balance, tier, created_at, updated_at")
     .order("updated_at", { ascending: false })
-    .limit(120);
+    .range(from, to);
 
   if (search) {
     query = query.ilike("tier", `%${search}%`);
@@ -260,6 +267,7 @@ export async function awardLoyaltyPointsForOrder(input: {
 export async function listAdminAffiliates({
   search,
   status,
+  page = 1,
 }: ListFilterParams = {}): Promise<AdminAffiliate[]> {
   const serviceClient = createSupabaseServiceClient();
   if (!serviceClient) {
@@ -268,11 +276,14 @@ export async function listAdminAffiliates({
       .filter((affiliate) => includesSearch(`${affiliate.name} ${affiliate.code}`, search));
   }
 
+  const from = (page - 1) * PAGE_SIZE_GROWTH;
+  const to = from + PAGE_SIZE_GROWTH - 1;
+
   let query = serviceClient
     .from("affiliates")
     .select("id, name, email, code, status, commission_rate, notes, created_at, updated_at")
     .order("updated_at", { ascending: false })
-    .limit(200);
+    .range(from, to);
 
   if (status) {
     query = query.eq("status", status);
@@ -362,11 +373,15 @@ export async function upsertAdminAffiliate(input: UpsertAffiliateInput) {
 
 export async function listAdminAffiliatePayouts({
   status,
+  page = 1,
 }: ListFilterParams = {}): Promise<AdminAffiliatePayout[]> {
   const serviceClient = createSupabaseServiceClient();
   if (!serviceClient) {
     return fallbackPayouts.filter((payout) => (status ? payout.status === status : true));
   }
+
+  const from = (page - 1) * PAGE_SIZE_GROWTH;
+  const to = from + PAGE_SIZE_GROWTH - 1;
 
   let query = serviceClient
     .from("affiliate_payouts")
@@ -374,7 +389,7 @@ export async function listAdminAffiliatePayouts({
       "id, affiliate_id, period_start, period_end, amount, status, paid_at, reference, created_at, updated_at",
     )
     .order("created_at", { ascending: false })
-    .limit(200);
+    .range(from, to);
 
   if (status) {
     query = query.eq("status", status);
@@ -460,6 +475,119 @@ export async function upsertAdminAffiliatePayout(input: UpsertAffiliatePayoutInp
   if (error) {
     throw new Error(error.message);
   }
+}
+
+export interface AffiliateDashboard {
+  affiliate: {
+    id: string;
+    name: string;
+    code: string;
+    status: AffiliateStatus;
+    commissionRate: number;
+  };
+  stats: {
+    totalClicks: number;
+    totalConversions: number;
+    pendingCommission: number;
+    approvedCommission: number;
+    redeemableCommission: number;
+  };
+  payouts: {
+    id: string;
+    periodStart: string | null;
+    periodEnd: string | null;
+    amount: number;
+    status: PayoutStatus;
+    paidAt: string | null;
+    reference: string | null;
+    createdAt: string;
+  }[];
+}
+
+export async function getAffiliateDashboardByEmail(
+  email: string,
+): Promise<AffiliateDashboard | null> {
+  const serviceClient = createSupabaseServiceClient();
+  if (!serviceClient) {
+    return null;
+  }
+
+  const normalizedEmail = email.trim().toLowerCase();
+
+  const { data: affiliateRow, error: affiliateError } = await serviceClient
+    .from("affiliates")
+    .select("id, name, code, status, commission_rate")
+    .ilike("email", normalizedEmail)
+    .maybeSingle();
+
+  if (affiliateError || !affiliateRow) {
+    return null;
+  }
+
+  const affiliateId = affiliateRow.id as string;
+
+  const [clicksResult, conversionsResult, payoutsResult] = await Promise.all([
+    serviceClient
+      .from("affiliate_clicks")
+      .select("id", { count: "exact", head: true })
+      .eq("affiliate_id", affiliateId),
+    serviceClient
+      .from("affiliate_conversions")
+      .select("commission_amount, status")
+      .eq("affiliate_id", affiliateId),
+    serviceClient
+      .from("affiliate_payouts")
+      .select("id, period_start, period_end, amount, status, paid_at, reference, created_at")
+      .eq("affiliate_id", affiliateId)
+      .order("created_at", { ascending: false })
+      .limit(50),
+  ]);
+
+  const conversions = conversionsResult.data ?? [];
+  const pendingCommission = conversions
+    .filter((c) => c.status === "pending")
+    .reduce((sum, c) => sum + Number(c.commission_amount), 0);
+  const approvedCommission = conversions
+    .filter((c) => c.status === "approved")
+    .reduce((sum, c) => sum + Number(c.commission_amount), 0);
+
+  const payoutRows = payoutsResult.data ?? [];
+  const alreadyPaidOut = payoutRows
+    .filter((p) => p.status === "paid" || p.status === "approved")
+    .reduce((sum, p) => sum + Number(p.amount), 0);
+  const redeemableCommission = Math.max(
+    0,
+    Math.round((approvedCommission - alreadyPaidOut) * 100) / 100,
+  );
+
+  const payouts = payoutRows.map((row) => ({
+    id: row.id as string,
+    periodStart: (row.period_start as string | null) ?? null,
+    periodEnd: (row.period_end as string | null) ?? null,
+    amount: Number(row.amount),
+    status: row.status as PayoutStatus,
+    paidAt: (row.paid_at as string | null) ?? null,
+    reference: (row.reference as string | null) ?? null,
+    createdAt: row.created_at as string,
+  }));
+
+  return {
+    affiliate: {
+      id: affiliateId,
+      name: affiliateRow.name as string,
+      code: affiliateRow.code as string,
+      status: affiliateRow.status as AffiliateStatus,
+      commissionRate: Number(affiliateRow.commission_rate),
+    },
+    stats: {
+      totalClicks: clicksResult.count ?? 0,
+      totalConversions: conversions.length,
+      pendingCommission: Math.round(pendingCommission * 100) / 100,
+      approvedCommission: Math.round(approvedCommission * 100) / 100,
+      redeemableCommission,
+    },
+    payouts,
+  };
 }
 
 export async function findAffiliateByCode(code?: string | null) {
@@ -560,4 +688,69 @@ export async function recordAffiliateConversion(input: {
   if (error) {
     throw new Error(error.message);
   }
+}
+
+function generateCouponCode(affiliateCode: string): string {
+  const random = Math.random().toString(36).slice(2, 8).toUpperCase();
+  return `AFF-${affiliateCode}-${random}`;
+}
+
+export async function generateAffiliateCouponFromCommission(input: {
+  affiliateId: string;
+  affiliateCode: string;
+  amount: number;
+}): Promise<string> {
+  const serviceClient = createSupabaseServiceClient();
+  if (!serviceClient) {
+    throw new Error("Service unavailable.");
+  }
+
+  const couponCode = generateCouponCode(input.affiliateCode);
+
+  // Create a fixed-amount promotion for this coupon
+  const { data: promoData, error: promoError } = await serviceClient
+    .from("promotions")
+    .insert({
+      name: `Affiliate credit — ${input.affiliateCode}`,
+      status: "active",
+      type: "fixed_amount",
+      scope: "order",
+      amount_off: input.amount,
+      min_order_total: 0,
+      is_stackable: false,
+    })
+    .select("id")
+    .single();
+
+  if (promoError || !promoData) {
+    throw new Error(promoError?.message ?? "Failed to create promotion.");
+  }
+
+  // Create the single-use coupon tied to that promotion
+  const { error: couponError } = await serviceClient.from("coupon_codes").insert({
+    promotion_id: promoData.id,
+    code: couponCode,
+    status: "active",
+    usage_limit: 1,
+    per_customer_limit: 1,
+  });
+
+  if (couponError) {
+    throw new Error(couponError.message);
+  }
+
+  // Record the payout so this commission isn't redeemable again
+  const { error: payoutError } = await serviceClient.from("affiliate_payouts").insert({
+    affiliate_id: input.affiliateId,
+    amount: input.amount,
+    status: "paid",
+    reference: `COUPON:${couponCode}`,
+    paid_at: new Date().toISOString(),
+  });
+
+  if (payoutError) {
+    throw new Error(payoutError.message);
+  }
+
+  return couponCode;
 }

@@ -15,11 +15,15 @@ const buttonVariants = cva(
           "border border-graphite/20 bg-white/80 text-graphite hover:border-graphite/32 hover:bg-white hover:shadow-sm",
         ghost:
           "bg-transparent text-graphite hover:bg-graphite/8 border border-transparent hover:border-graphite/10",
+        mineral:
+          "bg-mineral text-white hover:brightness-[0.88] hover:shadow-md focus-visible:outline-mineral",
       },
       size: {
         default: "h-11 px-5",
         sm: "h-9 px-4 text-xs",
         icon: "h-10 w-10 rounded-full",
+        adminSm: "h-9 px-4 text-xs uppercase tracking-[0.12em]",
+        adminMd: "h-10 px-5 text-xs uppercase tracking-[0.12em]",
       },
     },
     defaultVariants: {

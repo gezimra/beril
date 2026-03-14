@@ -6,7 +6,9 @@ import {
   upsertNotificationTemplateAction,
 } from "@/app/admin/actions";
 import { Container } from "@/components/layout/container";
+import { buttonVariants } from "@/components/ui/button";
 import { FloatInput, FloatSelect, FloatTextarea } from "@/components/ui/float-field";
+import { Pagination } from "@/components/ui/pagination";
 import { PhoneInput } from "@/components/ui/phone-input";
 import { StatusBadge } from "@/components/ui/status-badge";
 import {
@@ -42,8 +44,10 @@ export default async function AdminSupportPage({
   const status = getQueryParam(query.status);
   const selectedThreadId = getQueryParam(query.threadId);
 
+  const page = Math.max(1, parseInt(getQueryParam(query.page, "1"), 10));
+
   const [threads, templates, jobs] = await Promise.all([
-    listAdminSupportThreads({ search, status }),
+    listAdminSupportThreads({ search, status, page }),
     listAdminNotificationTemplates(),
     listAdminNotificationJobs(),
   ]);
@@ -85,7 +89,7 @@ export default async function AdminSupportPage({
             </FloatSelect>
             <button
               type="submit"
-              className="inline-flex h-10 items-center justify-center rounded-full bg-walnut px-5 text-xs uppercase tracking-[0.12em] text-white"
+              className={buttonVariants({ variant: "primary", size: "adminMd" })}
             >
               Apply
             </button>
@@ -134,7 +138,7 @@ export default async function AdminSupportPage({
             </div>
             <button
               type="submit"
-              className="inline-flex h-9 items-center rounded-full bg-mineral px-4 text-xs uppercase tracking-[0.12em] text-white"
+              className={buttonVariants({ variant: "mineral", size: "adminSm" })}
             >
               Save Thread
             </button>
@@ -181,7 +185,7 @@ export default async function AdminSupportPage({
                     </FloatSelect>
                     <button
                       type="submit"
-                      className="inline-flex h-9 items-center rounded-full border border-graphite/18 bg-white px-3 text-[0.65rem] uppercase tracking-[0.1em] text-graphite"
+                      className={buttonVariants({ variant: "secondary", size: "adminSm" })}
                     >
                       Save
                     </button>
@@ -227,7 +231,7 @@ export default async function AdminSupportPage({
                   />
                   <button
                     type="submit"
-                    className="inline-flex h-9 items-center rounded-full bg-walnut px-4 text-xs uppercase tracking-[0.12em] text-white"
+                    className={buttonVariants({ variant: "primary", size: "adminSm" })}
                   >
                     Send Reply
                   </button>
@@ -285,7 +289,7 @@ export default async function AdminSupportPage({
               </label>
               <button
                 type="submit"
-                className="inline-flex h-9 items-center rounded-full border border-graphite/18 bg-white px-4 text-xs uppercase tracking-[0.12em] text-graphite"
+                className={buttonVariants({ variant: "secondary", size: "adminSm" })}
               >
                 Save Template
               </button>
@@ -353,7 +357,7 @@ export default async function AdminSupportPage({
               />
               <button
                 type="submit"
-                className="inline-flex h-9 items-center rounded-full bg-mineral px-4 text-xs uppercase tracking-[0.12em] text-white"
+                className={buttonVariants({ variant: "mineral", size: "adminSm" })}
               >
                 Queue Job
               </button>
@@ -375,6 +379,13 @@ export default async function AdminSupportPage({
           </article>
         </section>
       </div>
+
+      <Pagination
+        page={page}
+        hasMore={threads.length === 25}
+        searchParams={{ search: search || undefined, status: status || undefined }}
+        className="surface-panel p-4"
+      />
     </Container>
   );
 }

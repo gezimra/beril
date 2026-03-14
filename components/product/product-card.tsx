@@ -89,9 +89,23 @@ export function ProductCard({ product, movementLabel, messages }: ProductCardPro
               stockStatus={product.stockStatus}
             />
           </div>
-          <p className="text-base font-medium text-graphite sm:text-lg">
-            {formatEur(product.price)}
-          </p>
+          {product.salePercentage && product.salePercentage > 0 && !product.campaignSaleOnly ? (
+            <div className="flex flex-wrap items-baseline gap-2">
+              <p className="text-base font-medium text-mineral sm:text-lg">
+                {formatEur(product.price * (1 - product.salePercentage / 100))}
+              </p>
+              <p className="text-sm text-graphite/50 line-through">
+                {formatEur(product.price)}
+              </p>
+              <span className="rounded-full bg-mineral/10 px-1.5 py-0.5 text-[0.6rem] font-medium uppercase tracking-wide text-mineral">
+                -{product.salePercentage}%
+              </span>
+            </div>
+          ) : (
+            <p className="text-base font-medium text-graphite sm:text-lg">
+              {formatEur(product.price)}
+            </p>
+          )}
         </Link>
         {canAddToCart ? (
           <AddToCartButton

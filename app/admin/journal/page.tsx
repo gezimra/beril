@@ -3,7 +3,9 @@ import {
   upsertJournalPostAction,
 } from "@/app/admin/actions";
 import { Container } from "@/components/layout/container";
+import { buttonVariants } from "@/components/ui/button";
 import { FloatInput, FloatSelect, FloatTextarea } from "@/components/ui/float-field";
+import { Pagination } from "@/components/ui/pagination";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { listAdminJournalPosts } from "@/lib/db/admin";
 import { formatStatusLabel } from "@/lib/utils/status-label";
@@ -29,7 +31,8 @@ export default async function AdminJournalPage({
   const query = await searchParams;
   const search = getQueryParam(query.search);
   const status = getQueryParam(query.status);
-  const posts = await listAdminJournalPosts({ search, status });
+  const page = Math.max(1, parseInt(getQueryParam(query.page, "1"), 10));
+  const posts = await listAdminJournalPosts({ search, status, page });
 
   return (
     <Container className="space-y-6">
@@ -80,7 +83,7 @@ export default async function AdminJournalPage({
         </FloatSelect>
         <button
           type="submit"
-          className="inline-flex h-10 items-center justify-center rounded-full bg-walnut px-5 text-xs uppercase tracking-[0.12em] text-white"
+          className={buttonVariants({ variant: "primary", size: "adminMd" })}
         >
           Create Post
         </button>
@@ -106,7 +109,7 @@ export default async function AdminJournalPage({
         </FloatSelect>
         <button
           type="submit"
-          className="inline-flex h-10 items-center justify-center rounded-full bg-mineral px-5 text-xs uppercase tracking-[0.12em] text-white"
+          className={buttonVariants({ variant: "mineral", size: "adminMd" })}
         >
           Apply
         </button>
@@ -161,7 +164,7 @@ export default async function AdminJournalPage({
                 </FloatSelect>
                 <button
                   type="submit"
-                  className="inline-flex h-10 items-center justify-center rounded-full border border-graphite/18 bg-white/85 px-5 text-xs uppercase tracking-[0.12em] text-graphite"
+                  className={buttonVariants({ variant: "secondary", size: "adminMd" })}
                 >
                   Save
                 </button>
@@ -202,13 +205,19 @@ export default async function AdminJournalPage({
             />
             <button
               type="submit"
-              className="inline-flex h-10 items-center justify-center rounded-full border border-graphite/18 bg-white/85 px-5 text-xs uppercase tracking-[0.12em] text-graphite"
+              className={buttonVariants({ variant: "secondary", size: "adminMd" })}
             >
               Upload
             </button>
           </form>
         </section>
       ) : null}
+      <Pagination
+        page={page}
+        hasMore={posts.length === 30}
+        searchParams={{ search: search || undefined, status: status || undefined }}
+        className="surface-panel p-4"
+      />
     </Container>
   );
 }

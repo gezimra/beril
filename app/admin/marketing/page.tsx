@@ -5,7 +5,9 @@ import {
   upsertPromotionAction,
 } from "@/app/admin/actions";
 import { Container } from "@/components/layout/container";
+import { buttonVariants } from "@/components/ui/button";
 import { FloatInput, FloatSelect, FloatTextarea } from "@/components/ui/float-field";
+import { Pagination } from "@/components/ui/pagination";
 import { StatusBadge } from "@/components/ui/status-badge";
 import {
   listAdminCampaigns,
@@ -38,11 +40,12 @@ export default async function AdminMarketingPage({
   const query = await searchParams;
   const search = getQueryParam(query.search);
   const status = getQueryParam(query.status);
+  const page = Math.max(1, parseInt(getQueryParam(query.page, "1"), 10));
 
   const [campaigns, promotions, coupons] = await Promise.all([
-    listAdminCampaigns({ search, status }),
-    listAdminPromotions({ search, status }),
-    listAdminCoupons({ search, status }),
+    listAdminCampaigns({ search, status, page }),
+    listAdminPromotions({ search, status, page }),
+    listAdminCoupons({ search, status, page }),
   ]);
 
   return (
@@ -77,7 +80,7 @@ export default async function AdminMarketingPage({
         </FloatSelect>
         <button
           type="submit"
-          className="inline-flex h-10 items-center justify-center rounded-full bg-walnut px-5 text-xs uppercase tracking-[0.12em] text-white"
+          className={buttonVariants({ variant: "primary", size: "adminMd" })}
         >
           Apply
         </button>
@@ -135,7 +138,7 @@ export default async function AdminMarketingPage({
           </div>
           <button
             type="submit"
-            className="inline-flex h-9 items-center rounded-full bg-mineral px-4 text-xs uppercase tracking-[0.12em] text-white"
+            className={buttonVariants({ variant: "mineral", size: "adminSm" })}
           >
             Save Campaign
           </button>
@@ -237,7 +240,7 @@ export default async function AdminMarketingPage({
           </div>
           <button
             type="submit"
-            className="inline-flex h-9 items-center rounded-full bg-mineral px-4 text-xs uppercase tracking-[0.12em] text-white"
+            className={buttonVariants({ variant: "mineral", size: "adminSm" })}
           >
             Save Promotion
           </button>
@@ -291,7 +294,7 @@ export default async function AdminMarketingPage({
           />
           <button
             type="submit"
-            className="inline-flex h-10 items-center justify-center rounded-full bg-walnut px-4 text-xs uppercase tracking-[0.12em] text-white"
+            className={buttonVariants({ variant: "primary", size: "adminMd" })}
           >
             Save Coupon
           </button>
@@ -341,7 +344,7 @@ export default async function AdminMarketingPage({
           />
           <button
             type="submit"
-            className="inline-flex h-10 items-center justify-center rounded-full bg-mineral px-4 text-xs uppercase tracking-[0.12em] text-white"
+            className={buttonVariants({ variant: "mineral", size: "adminMd" })}
           >
             Assign Coupon
           </button>
@@ -419,6 +422,13 @@ export default async function AdminMarketingPage({
           </ul>
         </article>
       </section>
+
+      <Pagination
+        page={page}
+        hasMore={campaigns.length === 30 || promotions.length === 30 || coupons.length === 30}
+        searchParams={{ search: search || undefined, status: status || undefined }}
+        className="surface-panel p-4"
+      />
     </Container>
   );
 }

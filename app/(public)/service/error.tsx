@@ -3,6 +3,8 @@
 import { useEffect } from "react";
 import Link from "next/link";
 
+import { buttonVariants } from "@/components/ui/button";
+
 export default function ServiceError({
   error,
   reset,
@@ -25,13 +27,13 @@ export default function ServiceError({
       <div className="mt-6 flex items-center justify-center gap-3">
         <button
           onClick={reset}
-          className="inline-flex h-10 items-center rounded-full bg-mineral-green px-6 text-sm font-medium uppercase tracking-wider text-white transition-colors hover:bg-mineral-green/90"
+          className={buttonVariants({ variant: "primary", className: "h-10" })}
         >
           Try again
         </button>
         <Link
           href="/"
-          className="inline-flex h-10 items-center rounded-full border border-graphite/20 px-6 text-sm font-medium uppercase tracking-wider text-graphite transition-colors hover:bg-graphite/5"
+          className={buttonVariants({ variant: "secondary", className: "h-10" })}
         >
           Go Home
         </Link>

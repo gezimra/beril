@@ -18,7 +18,10 @@ import type {
 interface ListFilterParams {
   search?: string;
   status?: string;
+  page?: number;
 }
+
+const PAGE_SIZE_THREADS = 25;
 
 interface CreateSupportThreadInput {
   subject: string;
@@ -228,6 +231,7 @@ export async function incrementCustomerRepairStats(customerProfileId: string) {
 export async function listAdminSupportThreads({
   search,
   status,
+  page = 1,
 }: ListFilterParams = {}): Promise<AdminSupportThread[]> {
   const serviceClient = createSupabaseServiceClient();
   if (!serviceClient) {
@@ -236,13 +240,16 @@ export async function listAdminSupportThreads({
       .filter((thread) => includesSearch(thread.subject, search));
   }
 
+  const from = (page - 1) * PAGE_SIZE_THREADS;
+  const to = from + PAGE_SIZE_THREADS - 1;
+
   let query = serviceClient
     .from("support_threads")
     .select(
       "id, customer_profile_id, subject, channel, status, assigned_to, last_message_at, created_at, updated_at",
     )
     .order("updated_at", { ascending: false })
-    .limit(120);
+    .range(from, to);
 
   if (status) {
     query = query.eq("status", status);
@@ -605,11 +612,15 @@ export async function queueNotificationJob(input: {
 
 export async function listAdminNotificationJobs({
   status,
+  page = 1,
 }: ListFilterParams = {}): Promise<AdminNotificationJob[]> {
   const serviceClient = createSupabaseServiceClient();
   if (!serviceClient) {
     return fallbackJobs.filter((job) => (status ? job.status === status : true));
   }
+
+  const from = (page - 1) * PAGE_SIZE_THREADS;
+  const to = from + PAGE_SIZE_THREADS - 1;
 
   let query = serviceClient
     .from("notification_jobs")
@@ -617,7 +628,7 @@ export async function listAdminNotificationJobs({
       "id, template_id, customer_profile_id, channel, trigger, status, scheduled_for, sent_at, error_message, created_at, updated_at",
     )
     .order("created_at", { ascending: false })
-    .limit(120);
+    .range(from, to);
 
   if (status) {
     query = query.eq("status", status as NotificationStatus);

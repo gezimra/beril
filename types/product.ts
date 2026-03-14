@@ -45,4 +45,9 @@ export interface Product {
   updatedAt: string;
   images: ProductImage[];
   specs: ProductSpec[];
+  warrantyMonths: number;
+  warrantyTerms: string | null;
+  purchasePrice: number | null;
+  salePercentage: number | null;
+  campaignSaleOnly: boolean;
 }

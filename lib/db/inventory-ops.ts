@@ -44,7 +44,10 @@ import type {
 interface ListFilterParams {
   search?: string;
   status?: string;
+  page?: number;
 }
+
+const PAGE_SIZE_CASHBOOK = 40;
 
 interface UpsertSupplierInput {
   id?: string;
@@ -139,6 +142,8 @@ interface CreateManualRepairRequestInput {
   itemType: "watch" | "eyewear" | "other";
   brand: string;
   model: string;
+  serialNumber?: string | null;
+  serviceItemId?: string | null;
   serviceType: string;
   description: string;
   dropOffMethod: "bring_to_store" | "already_dropped_off" | "contact_me_first";
@@ -147,6 +152,173 @@ interface CreateManualRepairRequestInput {
   amountDue?: number | null;
   notesInternal?: string | null;
   notesCustomer?: string | null;
+}
+
+export interface ServiceItemLookup {
+  id: string;
+  itemType: string;
+  brand: string | null;
+  model: string | null;
+  serialNumber: string | null;
+  purchaseDate: string | null;
+  warrantyMonths: number | null;
+  serviceCount: number;
+  lastServiceAt: string | null;
+}
+
+/** Search service_items by serial number, brand, or model. Returns up to `limit` results with service history count. */
+export async function lookupServiceItems({
+  query,
+  limit = 6,
+}: {
+  query: string;
+  limit?: number;
+}): Promise<ServiceItemLookup[]> {
+  const serviceClient = createSupabaseServiceClient();
+  if (!serviceClient) return [];
+
+  const q = query.trim();
+  if (q.length < 2) return [];
+
+  // Search across serial_number, brand, model with ilike
+  const { data, error } = await serviceClient
+    .from("service_items")
+    .select(`
+      id, item_type, brand, model, serial_number, purchase_date, warranty_months,
+      repair_requests(id, created_at)
+    `)
+    .or(`serial_number.ilike.%${q}%,brand.ilike.%${q}%,model.ilike.%${q}%`)
+    .order("created_at", { ascending: false })
+    .limit(limit);
+
+  if (error || !data) return [];
+
+  return data.map((row) => {
+    const repairs = Array.isArray(row.repair_requests) ? row.repair_requests : [];
+    const sorted = repairs
+      .map((r: { id: string; created_at: string }) => r.created_at)
+      .sort()
+      .reverse();
+    return {
+      id: row.id,
+      itemType: row.item_type,
+      brand: row.brand ?? null,
+      model: row.model ?? null,
+      serialNumber: row.serial_number ?? null,
+      purchaseDate: row.purchase_date ?? null,
+      warrantyMonths: row.warranty_months ?? null,
+      serviceCount: repairs.length,
+      lastServiceAt: sorted[0] ?? null,
+    };
+  });
+}
+
+/**
+ * Find an existing service_item by serialNumber (exact match) or create a new one.
+ * If serviceItemId is supplied, returns it directly (already linked by UI lookup).
+ */
+export async function upsertServiceItem({
+  serviceItemId,
+  itemType,
+  brand,
+  model,
+  serialNumber,
+  warrantyMonths,
+  purchaseDate,
+  linkedOrderId,
+}: {
+  serviceItemId?: string | null;
+  itemType: "watch" | "eyewear" | "other";
+  brand?: string | null;
+  model?: string | null;
+  serialNumber?: string | null;
+  warrantyMonths?: number | null;
+  purchaseDate?: string | null;
+  linkedOrderId?: string | null;
+}): Promise<string | null> {
+  const serviceClient = createSupabaseServiceClient();
+  if (!serviceClient) return null;
+
+  // If a specific item was already selected by the UI, use it
+  if (serviceItemId) return serviceItemId;
+
+  // Look up by serial number (most reliable identity)
+  if (serialNumber?.trim()) {
+    const { data: existing } = await serviceClient
+      .from("service_items")
+      .select("id")
+      .eq("serial_number", serialNumber.trim())
+      .maybeSingle();
+
+    if (existing) {
+      // Update brand/model in case they've changed
+      await serviceClient
+        .from("service_items")
+        .update({ brand: brand?.trim() || null, model: model?.trim() || null })
+        .eq("id", existing.id);
+      return existing.id;
+    }
+  }
+
+  // Create new item record
+  const { data: created, error } = await serviceClient
+    .from("service_items")
+    .insert({
+      item_type: itemType,
+      brand: brand?.trim() || null,
+      model: model?.trim() || null,
+      serial_number: serialNumber?.trim() || null,
+      ...(warrantyMonths != null ? { warranty_months: warrantyMonths } : {}),
+      ...(purchaseDate ? { purchase_date: purchaseDate } : {}),
+      ...(linkedOrderId ? { linked_order_id: linkedOrderId } : {}),
+    })
+    .select("id")
+    .single();
+
+  if (error || !created) return null;
+  return created.id;
+}
+
+/**
+ * Called when an order transitions to completed/delivered.
+ * For each order_item whose product has warranty_months > 0, creates a
+ * service_item record linking the physical item to the order so future
+ * repair intake can surface warranty status automatically.
+ */
+export async function autoCreateWarrantyServiceItems(orderId: string): Promise<void> {
+  const serviceClient = createSupabaseServiceClient();
+  if (!serviceClient) return;
+
+  // Fetch order items joined with product warranty_months + category + brand
+  const { data: items } = await serviceClient
+    .from("order_items")
+    .select("id, product_title_snapshot, product_brand_snapshot, product_id, products(category, warranty_months)")
+    .eq("order_id", orderId);
+
+  if (!items || items.length === 0) return;
+
+  const today = new Date().toISOString().slice(0, 10);
+
+  for (const item of items) {
+    const rawProduct = item.products;
+    const product = Array.isArray(rawProduct)
+      ? (rawProduct[0] as { category: string; warranty_months: number } | undefined)
+      : (rawProduct as { category: string; warranty_months: number } | null);
+    if (!product || !product.warranty_months || product.warranty_months <= 0) continue;
+
+    const category = product.category as "watch" | "eyewear";
+    const itemType: "watch" | "eyewear" | "other" =
+      category === "watch" || category === "eyewear" ? category : "other";
+
+    await upsertServiceItem({
+      itemType,
+      brand: item.product_brand_snapshot ?? null,
+      model: item.product_title_snapshot ?? null,
+      warrantyMonths: product.warranty_months,
+      purchaseDate: today,
+      linkedOrderId: orderId,
+    });
+  }
 }
 
 interface UpsertWatchBrandInput {
@@ -264,6 +436,7 @@ function isUuid(value: string) {
 
 export async function listAdminSuppliers({
   search,
+  page = 1,
 }: ListFilterParams = {}): Promise<AdminSupplier[]> {
   const serviceClient = createSupabaseServiceClient();
   if (!serviceClient) {
@@ -272,11 +445,14 @@ export async function listAdminSuppliers({
     );
   }
 
+  const from = (page - 1) * PAGE_SIZE_CASHBOOK;
+  const to = from + PAGE_SIZE_CASHBOOK - 1;
+
   let query = serviceClient
     .from("suppliers")
     .select("id, name, contact_name, email, phone, notes, created_at, updated_at")
     .order("updated_at", { ascending: false })
-    .limit(120);
+    .range(from, to);
 
   if (search) {
     query = query.or(`name.ilike.%${search}%,email.ilike.%${search}%`);
@@ -358,6 +534,7 @@ export async function upsertAdminSupplier(input: UpsertSupplierInput) {
 
 export async function listAdminInventoryItems({
   search,
+  page = 1,
 }: ListFilterParams = {}): Promise<AdminInventoryItem[]> {
   const serviceClient = createSupabaseServiceClient();
   if (!serviceClient) {
@@ -369,13 +546,16 @@ export async function listAdminInventoryItems({
     );
   }
 
+  const from = (page - 1) * PAGE_SIZE_CASHBOOK;
+  const to = from + PAGE_SIZE_CASHBOOK - 1;
+
   let query = serviceClient
     .from("inventory_items")
     .select(
       "id, sku, name, item_type, brand, model, caliber, quantity_on_hand, reorder_level, unit_cost, unit_price, location, notes, active, created_at, updated_at",
     )
     .order("updated_at", { ascending: false })
-    .limit(200);
+    .range(from, to);
 
   if (search) {
     query = query.or(
@@ -491,6 +671,7 @@ export async function upsertAdminInventoryItem(input: UpsertInventoryItemInput) 
 
 export async function listAdminCashbookEntries({
   search,
+  page = 1,
 }: ListFilterParams = {}): Promise<AdminCashbookEntry[]> {
   const serviceClient = createSupabaseServiceClient();
   if (!serviceClient) {
@@ -502,6 +683,9 @@ export async function listAdminCashbookEntries({
     );
   }
 
+  const from = (page - 1) * PAGE_SIZE_CASHBOOK;
+  const to = from + PAGE_SIZE_CASHBOOK - 1;
+
   let query = serviceClient
     .from("cashbook_entries")
     .select(
@@ -509,7 +693,7 @@ export async function listAdminCashbookEntries({
     )
     .order("entry_date", { ascending: false })
     .order("created_at", { ascending: false })
-    .limit(220);
+    .range(from, to);
 
   if (search) {
     query = query.or(
@@ -833,8 +1017,9 @@ export async function createManualAdminRepairRequest(input: CreateManualRepairRe
       item_type: input.itemType,
       brand: input.brand,
       model: input.model,
-      serial_number: null,
+      serial_number: input.serialNumber?.trim() || null,
       purchase_date: null,
+      service_item_id: input.serviceItemId ?? null,
       service_type: input.serviceType,
       description: input.description,
       drop_off_method: input.dropOffMethod,
@@ -867,6 +1052,7 @@ export async function createManualAdminRepairRequest(input: CreateManualRepairRe
 
 export async function listAdminWatchBrands({
   search,
+  page = 1,
 }: ListFilterParams = {}): Promise<AdminWatchBrand[]> {
   const serviceClient = createSupabaseServiceClient();
   if (!serviceClient) {
@@ -875,11 +1061,14 @@ export async function listAdminWatchBrands({
     );
   }
 
+  const from = (page - 1) * PAGE_SIZE_CASHBOOK;
+  const to = from + PAGE_SIZE_CASHBOOK - 1;
+
   let query = serviceClient
     .from("watch_brands")
     .select("id, name, country, website, notes, created_at, updated_at")
     .order("name", { ascending: true })
-    .limit(200);
+    .range(from, to);
 
   if (search) {
     query = query.or(`name.ilike.%${search}%,country.ilike.%${search}%`);
@@ -953,6 +1142,7 @@ export async function upsertAdminWatchBrand(input: UpsertWatchBrandInput) {
 
 export async function listAdminWatchCalibers({
   search,
+  page = 1,
 }: ListFilterParams = {}): Promise<AdminWatchCaliber[]> {
   const serviceClient = createSupabaseServiceClient();
   if (!serviceClient) {
@@ -961,13 +1151,16 @@ export async function listAdminWatchCalibers({
     );
   }
 
+  const from = (page - 1) * PAGE_SIZE_CASHBOOK;
+  const to = from + PAGE_SIZE_CASHBOOK - 1;
+
   let query = serviceClient
     .from("watch_calibers")
     .select(
       "id, brand_id, caliber_name, movement_type, power_reserve_hours, frequency_bph, jewels, diameter_mm, height_mm, has_hacking, has_hand_winding, notes, created_at, updated_at",
     )
     .order("caliber_name", { ascending: true })
-    .limit(220);
+    .range(from, to);
 
   if (search) {
     query = query.or(`caliber_name.ilike.%${search}%,movement_type.ilike.%${search}%`);
@@ -1072,6 +1265,7 @@ export async function upsertAdminWatchCaliber(input: UpsertWatchCaliberInput) {
 
 export async function listAdminWatchModels({
   search,
+  page = 1,
 }: ListFilterParams = {}): Promise<AdminWatchModel[]> {
   const serviceClient = createSupabaseServiceClient();
   if (!serviceClient) {
@@ -1080,11 +1274,14 @@ export async function listAdminWatchModels({
     );
   }
 
+  const from = (page - 1) * PAGE_SIZE_CASHBOOK;
+  const to = from + PAGE_SIZE_CASHBOOK - 1;
+
   let query = serviceClient
     .from("watch_models")
     .select("id, brand_id, model_name, collection, target_gender, notes, created_at, updated_at")
     .order("model_name", { ascending: true })
-    .limit(220);
+    .range(from, to);
 
   if (search) {
     query = query.or(`model_name.ilike.%${search}%,collection.ilike.%${search}%`);
@@ -1162,6 +1359,7 @@ export async function upsertAdminWatchModel(input: UpsertWatchModelInput) {
 
 export async function listAdminWatchReferences({
   search,
+  page = 1,
 }: ListFilterParams = {}): Promise<AdminWatchReference[]> {
   const serviceClient = createSupabaseServiceClient();
   if (!serviceClient) {
@@ -1170,13 +1368,16 @@ export async function listAdminWatchReferences({
     );
   }
 
+  const from = (page - 1) * PAGE_SIZE_CASHBOOK;
+  const to = from + PAGE_SIZE_CASHBOOK - 1;
+
   let query = serviceClient
     .from("watch_references")
     .select(
       "id, model_id, reference_code, caliber_id, case_size_mm, lug_width_mm, water_resistance_m, crystal, case_material, dial_color, strap_type, production_from_year, production_to_year, notes, created_at, updated_at",
     )
     .order("reference_code", { ascending: true })
-    .limit(260);
+    .range(from, to);
 
   if (search) {
     query = query.or(`reference_code.ilike.%${search}%,dial_color.ilike.%${search}%`);
@@ -1289,6 +1490,7 @@ export async function upsertAdminWatchReference(input: UpsertWatchReferenceInput
 
 export async function listAdminInventoryCompatibility({
   search,
+  page = 1,
 }: ListFilterParams = {}): Promise<AdminInventoryCompatibility[]> {
   const serviceClient = createSupabaseServiceClient();
   if (!serviceClient) {
@@ -1300,11 +1502,14 @@ export async function listAdminInventoryCompatibility({
     );
   }
 
+  const from = (page - 1) * PAGE_SIZE_CASHBOOK;
+  const to = from + PAGE_SIZE_CASHBOOK - 1;
+
   let query = serviceClient
     .from("inventory_item_compatibility")
     .select("id, inventory_item_id, caliber_id, model_id, reference_id, notes, created_at")
     .order("created_at", { ascending: false })
-    .limit(220);
+    .range(from, to);
 
   if (search) {
     query = query.or(
@@ -1391,6 +1596,7 @@ export async function upsertAdminInventoryCompatibility(
 
 export async function listAdminRepairPartUsage({
   search,
+  page = 1,
 }: ListFilterParams = {}): Promise<AdminRepairPartUsage[]> {
   const serviceClient = createSupabaseServiceClient();
   if (!serviceClient) {
@@ -1399,11 +1605,14 @@ export async function listAdminRepairPartUsage({
     );
   }
 
+  const from = (page - 1) * PAGE_SIZE_CASHBOOK;
+  const to = from + PAGE_SIZE_CASHBOOK - 1;
+
   let query = serviceClient
     .from("repair_parts_used")
     .select("id, work_order_id, inventory_item_id, part_name, quantity, unit_cost, created_at")
     .order("created_at", { ascending: false })
-    .limit(220);
+    .range(from, to);
 
   if (search) {
     if (isUuid(search)) {
@@ -1485,6 +1694,7 @@ export async function createAdminRepairPartUsage(input: CreateRepairPartUsageInp
 export async function listAdminPurchaseOrders({
   search,
   status,
+  page = 1,
 }: ListFilterParams = {}): Promise<AdminPurchaseOrder[]> {
   const serviceClient = createSupabaseServiceClient();
   if (!serviceClient) {
@@ -1495,13 +1705,16 @@ export async function listAdminPurchaseOrders({
       );
   }
 
+  const from = (page - 1) * PAGE_SIZE_CASHBOOK;
+  const to = from + PAGE_SIZE_CASHBOOK - 1;
+
   let query = serviceClient
     .from("purchase_orders")
     .select(
       "id, po_number, supplier_id, status, ordered_at, received_at, notes, subtotal, total, created_at, updated_at",
     )
     .order("created_at", { ascending: false })
-    .limit(140);
+    .range(from, to);
 
   if (status) {
     query = query.eq("status", status);
@@ -1598,6 +1811,7 @@ export async function upsertAdminPurchaseOrder(input: UpsertPurchaseOrderInput) 
 
 export async function listAdminStockMovements({
   search,
+  page = 1,
 }: ListFilterParams = {}): Promise<AdminStockMovement[]> {
   const serviceClient = createSupabaseServiceClient();
   if (!serviceClient) {
@@ -1609,13 +1823,16 @@ export async function listAdminStockMovements({
     );
   }
 
+  const from = (page - 1) * PAGE_SIZE_CASHBOOK;
+  const to = from + PAGE_SIZE_CASHBOOK - 1;
+
   let query = serviceClient
     .from("stock_movements")
     .select(
       "id, product_id, inventory_item_id, movement_type, quantity_delta, unit_cost, reference_type, reference_id, note, created_at",
     )
     .order("created_at", { ascending: false })
-    .limit(220);
+    .range(from, to);
 
   if (search) {
     query = query.or(`reference_type.ilike.%${search}%,reference_id.ilike.%${search}%`);
@@ -1677,6 +1894,7 @@ export async function createStockMovement(input: CreateStockMovementInput) {
 export async function listAdminWorkOrders({
   search,
   status,
+  page = 1,
 }: ListFilterParams = {}): Promise<AdminWorkOrder[]> {
   const serviceClient = createSupabaseServiceClient();
   if (!serviceClient) {
@@ -1690,13 +1908,16 @@ export async function listAdminWorkOrders({
       );
   }
 
+  const from = (page - 1) * PAGE_SIZE_CASHBOOK;
+  const to = from + PAGE_SIZE_CASHBOOK - 1;
+
   let query = serviceClient
     .from("repair_work_orders")
     .select(
       "id, repair_request_id, status, diagnosis, estimate_amount, approved_by_customer, started_at, completed_at, created_at, updated_at",
     )
     .order("created_at", { ascending: false })
-    .limit(140);
+    .range(from, to);
 
   if (status) {
     query = query.eq("status", status);

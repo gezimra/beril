@@ -1,6 +1,6 @@
 "use client";
 
-import { Minus, Plus } from "lucide-react";
+import { Minus, Plus, Trash2 } from "lucide-react";
 import { startTransition, useState } from "react";
 import { useRouter } from "next/navigation";
 
@@ -22,7 +22,7 @@ export function AddToCartButton({
   label,
   compact = false,
 }: AddToCartButtonProps) {
-  const { items, addItem, updateQuantity, openCart } = useCart();
+  const { items, addItem, updateQuantity, removeItem, openCart } = useCart();
   const [isAdded, setIsAdded] = useState(false);
   const existingItem = items.find((entry) => entry.productId === item.productId);
   const currentQuantity = existingItem?.quantity ?? 0;
@@ -33,21 +33,25 @@ export function AddToCartButton({
 
   if (currentQuantity > 0) {
     return (
-      <div className="space-y-1">
-        <p className="text-[0.62rem] uppercase tracking-[0.12em] text-mineral/85 sm:text-[0.68rem]">
-          In Cart: {currentQuantity}
-        </p>
+      <div className="space-y-1.5">
         <div className="inline-flex items-center gap-1">
           <button
             type="button"
             aria-label={`Decrease ${item.title} quantity`}
-            disabled={currentQuantity <= 1}
-            onClick={() =>
-              updateQuantity(item.productId, Math.max(1, currentQuantity - 1))
-            }
-            className={`inline-flex ${qtyButtonSize} cursor-pointer items-center justify-center rounded-full border border-graphite/18 bg-white/90 text-graphite transition hover:bg-white disabled:cursor-not-allowed disabled:opacity-45`}
+            onClick={() => {
+              if (currentQuantity <= 1) {
+                removeItem(item.productId);
+              } else {
+                updateQuantity(item.productId, currentQuantity - 1);
+              }
+            }}
+            className={`inline-flex ${qtyButtonSize} cursor-pointer items-center justify-center rounded-full border border-graphite/18 bg-white/90 text-graphite transition hover:bg-white`}
           >
-            <Minus className="h-4 w-4" />
+            {currentQuantity <= 1 ? (
+              <Trash2 className="h-3.5 w-3.5 text-walnut/70" />
+            ) : (
+              <Minus className="h-4 w-4" />
+            )}
           </button>
           <span
             className={`inline-flex h-9 min-w-12 items-center justify-center rounded-full border border-mineral/25 bg-mineral/10 px-3 font-medium text-mineral ${qtyTextClass}`}
@@ -65,6 +69,9 @@ export function AddToCartButton({
             <Plus className="h-4 w-4" />
           </button>
         </div>
+        <p className="text-[0.62rem] uppercase tracking-[0.12em] text-mineral/75 sm:text-[0.68rem]">
+          In Cart: {currentQuantity}
+        </p>
       </div>
     );
   }

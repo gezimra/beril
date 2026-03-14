@@ -4,7 +4,9 @@ import {
   upsertLoyaltyRuleAction,
 } from "@/app/admin/actions";
 import { Container } from "@/components/layout/container";
+import { buttonVariants } from "@/components/ui/button";
 import { FloatInput, FloatSelect, FloatTextarea } from "@/components/ui/float-field";
+import { Pagination } from "@/components/ui/pagination";
 import { StatusBadge } from "@/components/ui/status-badge";
 import {
   listAdminAffiliatePayouts,
@@ -32,12 +34,13 @@ export default async function AdminGrowthPage({
   const query = await searchParams;
   const search = getQueryParam(query.search);
   const status = getQueryParam(query.status);
+  const page = Math.max(1, parseInt(getQueryParam(query.page, "1"), 10));
 
   const [rules, accounts, affiliates, payouts] = await Promise.all([
     listAdminLoyaltyRules(),
-    listAdminLoyaltyAccounts({ search }),
-    listAdminAffiliates({ search, status }),
-    listAdminAffiliatePayouts({ status }),
+    listAdminLoyaltyAccounts({ search, page }),
+    listAdminAffiliates({ search, status, page }),
+    listAdminAffiliatePayouts({ status, page }),
   ]);
 
   return (
@@ -70,7 +73,7 @@ export default async function AdminGrowthPage({
         </FloatSelect>
         <button
           type="submit"
-          className="inline-flex h-10 items-center justify-center rounded-full bg-walnut px-5 text-xs uppercase tracking-[0.12em] text-white"
+          className={buttonVariants({ variant: "primary", size: "adminMd" })}
         >
           Apply
         </button>
@@ -119,7 +122,7 @@ export default async function AdminGrowthPage({
             </label>
             <button
               type="submit"
-              className="inline-flex h-9 items-center rounded-full bg-mineral px-4 text-xs uppercase tracking-[0.12em] text-white"
+              className={buttonVariants({ variant: "mineral", size: "adminSm" })}
             >
               Save Rule
             </button>
@@ -209,7 +212,7 @@ export default async function AdminGrowthPage({
             />
             <button
               type="submit"
-              className="inline-flex h-9 items-center rounded-full bg-walnut px-4 text-xs uppercase tracking-[0.12em] text-white"
+              className={buttonVariants({ variant: "primary", size: "adminSm" })}
             >
               Save Affiliate
             </button>
@@ -291,7 +294,7 @@ export default async function AdminGrowthPage({
             />
             <button
               type="submit"
-              className="inline-flex h-9 items-center rounded-full bg-mineral px-4 text-xs uppercase tracking-[0.12em] text-white"
+              className={buttonVariants({ variant: "mineral", size: "adminSm" })}
             >
               Save Payout
             </button>
@@ -313,6 +316,13 @@ export default async function AdminGrowthPage({
           </ul>
         </article>
       </section>
+
+      <Pagination
+        page={page}
+        hasMore={affiliates.length === 30 || payouts.length === 30 || accounts.length === 30}
+        searchParams={{ search: search || undefined, status: status || undefined }}
+        className="surface-panel p-4"
+      />
     </Container>
   );
 }

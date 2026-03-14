@@ -1,5 +1,7 @@
 import { Container } from "@/components/layout/container";
+import { buttonVariants } from "@/components/ui/button";
 import { FloatInput } from "@/components/ui/float-field";
+import { Pagination } from "@/components/ui/pagination";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { listAdminCustomers } from "@/lib/db/admin";
 
@@ -22,7 +24,8 @@ export default async function AdminCustomersPage({
 }: AdminCustomersPageProps) {
   const query = await searchParams;
   const search = getQueryParam(query.search);
-  const customers = await listAdminCustomers({ search });
+  const page = Math.max(1, parseInt(getQueryParam(query.page, "1"), 10));
+  const customers = await listAdminCustomers({ search, page });
 
   return (
     <Container className="space-y-6">
@@ -42,7 +45,7 @@ export default async function AdminCustomersPage({
         />
         <button
           type="submit"
-          className="inline-flex h-10 items-center justify-center rounded-full bg-walnut px-5 text-xs uppercase tracking-[0.12em] text-white"
+          className={buttonVariants({ variant: "primary", size: "adminMd" })}
         >
           Apply
         </button>
@@ -98,6 +101,13 @@ export default async function AdminCustomersPage({
           </tbody>
         </table>
       </div>
+
+      <Pagination
+        page={page}
+        hasMore={customers.length === 30}
+        searchParams={{ search: search || undefined }}
+        className="surface-panel p-4"
+      />
     </Container>
   );
 }

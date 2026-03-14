@@ -305,6 +305,13 @@ export function MobileNav({
                           >
                             {messages.mobileNav.register}
                           </Link>
+                          <Link
+                            href="/orders/track"
+                            onClick={closeMenu}
+                            className="inline-flex h-9 items-center rounded-full border border-graphite/15 bg-white/80 px-4 text-xs uppercase tracking-[0.12em] text-graphite"
+                          >
+                            {messages.mobileNav.trackOrder}
+                          </Link>
                         </div>
                       )}
                     </div>

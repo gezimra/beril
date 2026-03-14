@@ -44,7 +44,23 @@ body {
 
 html,
 body {
-  overflow-x: hidden;
+  overflow-x: clip;
+}
+
+dialog {
+  border: none;
+  outline: none;
+  background: white;
+  position: fixed;
+  inset: 0;
+  margin: auto;
+  width: fit-content;
+  height: fit-content;
+}
+
+dialog::backdrop {
+  background: rgba(0, 0, 0, 0.45);
+  backdrop-filter: blur(3px);
 }
 
 h1,
@@ -255,4 +271,121 @@ h4 {
   letter-spacing: 0.06em;
   text-transform: uppercase;
   color: rgba(44, 44, 44, 0.58);
+}
+
+/* ── Admin shell overrides ──────────────────────────────────────────────────
+   Scoped to .admin-shell — no impact on the public storefront.
+   Goal: neutral, dense, tool-like UI instead of shop aesthetics.
+   ─────────────────────────────────────────────────────────────────────────── */
+
+/* Neutral background — replaces warm ivory radial gradient from body */
+.admin-shell {
+  background: #f4f4f5;
+}
+
+/* Sans-serif headings — Cormorant is decorative, not for admin tools */
+.admin-shell h1,
+.admin-shell h2,
+.admin-shell h3,
+.admin-shell h4 {
+  font-family: var(--font-geist), sans-serif;
+  font-weight: 500;
+  letter-spacing: -0.01em;
+}
+
+/* Compact heading sizes — text-4xl page titles and text-3xl section heads
+   were designed for a storefront, not a work tool */
+.admin-shell h1 {
+  font-size: 1.375rem;  /* 22px — was 2.25rem text-4xl */
+  line-height: 1.75rem;
+}
+
+.admin-shell h2 {
+  font-size: 1.125rem;  /* 18px — was text-2xl/text-3xl */
+  line-height: 1.5rem;
+}
+
+/* Crisp white panels — no frosted glass, no warm tones, minimal shadow */
+.admin-shell .surface-panel,
+.admin-shell .surface-panel-strong {
+  background: #ffffff;
+  border-color: rgba(0, 0, 0, 0.07);
+  border-radius: 0.5rem;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05), 0 0 0 0.5px rgba(0, 0, 0, 0.04);
+  backdrop-filter: none;
+}
+
+/* Compact, rectangular admin buttons — not fashion pill shapes */
+.admin-shell .admin-primary-btn,
+.admin-shell .admin-primary-btn-walnut,
+.admin-shell .admin-primary-btn-mineral {
+  border-radius: 0.375rem;
+  height: 2.125rem;
+  font-size: 0.7rem;
+  padding-inline: 0.875rem;
+}
+
+.admin-shell .admin-secondary-btn {
+  border-radius: 0.375rem;
+  background: #ffffff;
+  border-color: rgba(0, 0, 0, 0.12);
+  height: 2rem;
+  font-size: 0.68rem;
+  padding-inline: 0.625rem;
+}
+
+/* Mineral focus for admin inputs instead of decorative gold */
+.admin-shell .float-field > input:focus,
+.admin-shell .float-field > textarea:focus,
+.admin-shell .float-field > select:focus {
+  border-color: var(--color-mineral);
+  box-shadow: 0 0 0 3px rgba(47, 75, 68, 0.1);
+}
+
+.admin-shell .input-premium:focus,
+.admin-shell .textarea-premium:focus {
+  border-color: var(--color-mineral);
+  box-shadow: 0 0 0 3px rgba(47, 75, 68, 0.1);
+}
+
+/* Tighter status badges in admin context */
+.admin-shell .badge-soft {
+  border-radius: 0.3rem;
+  height: 1.5rem;
+  padding-inline: 0.5rem;
+  font-size: 0.6rem;
+}
+
+/* Admin advanced details panel */
+.admin-shell .admin-advanced {
+  background: #fafafa;
+  border-color: rgba(0, 0, 0, 0.08);
+}
+
+/* Sidebar clean border */
+.admin-shell aside.surface-panel {
+  border-color: rgba(0, 0, 0, 0.07);
+}
+
+/* Reduce decorative top margin on page titles — built for shop scroll pacing */
+.admin-shell h1.mt-3,
+.admin-shell h1.sm\:mt-3 {
+  margin-top: 0.375rem;
+}
+
+/* Form section divider — replaces coloured nested boxes */
+.admin-form-section {
+  padding-top: 1.125rem;
+  padding-bottom: 0.125rem;
+}
+
+.admin-form-section-label {
+  margin-bottom: 0.625rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.07);
+  font-size: 0.62rem;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: rgba(44, 44, 44, 0.42);
 }

@@ -182,9 +182,23 @@ export default async function ProductDetailPage({ params }: ProductDetailPagePro
                   {stockStatusLabel(product.stockStatus, messages.productPage)}
                 </StatusBadge>
               </div>
-              <p className="text-3xl font-medium text-graphite">
-                {formatEur(product.price)}
-              </p>
+              {product.salePercentage && product.salePercentage > 0 && !product.campaignSaleOnly ? (
+                <div className="flex items-center gap-3">
+                  <p className="text-3xl font-medium text-mineral">
+                    {formatEur(product.price * (1 - product.salePercentage / 100))}
+                  </p>
+                  <p className="text-xl text-graphite/50 line-through">
+                    {formatEur(product.price)}
+                  </p>
+                  <span className="rounded-full bg-mineral/10 px-2 py-0.5 text-sm font-medium text-mineral">
+                    -{product.salePercentage}%
+                  </span>
+                </div>
+              ) : (
+                <p className="text-3xl font-medium text-graphite">
+                  {formatEur(product.price)}
+                </p>
+              )}
               <div className="flex flex-wrap gap-3">
                 {canAddToCart ? (
                   <AddToCartButton
@@ -270,6 +284,20 @@ export default async function ProductDetailPage({ params }: ProductDetailPagePro
                     <dd className="font-medium text-graphite">{spec.value}</dd>
                   </div>
                 ))}
+                {product.warrantyMonths > 0 && (
+                  <div className="flex items-center justify-between rounded-lg border border-mineral/18 bg-mineral/[0.04] px-3 py-2">
+                    <dt className="uppercase tracking-[0.08em] text-graphite/65">Warranty</dt>
+                    <dd className="font-medium text-mineral">
+                      {product.warrantyMonths} {product.warrantyMonths === 1 ? "month" : "months"}
+                    </dd>
+                  </div>
+                )}
+                {product.warrantyTerms && (
+                  <div className="rounded-lg border border-mineral/18 bg-mineral/[0.04] px-3 py-2">
+                    <dt className="mb-1 uppercase tracking-[0.08em] text-graphite/65">Warranty coverage</dt>
+                    <dd className="text-sm leading-relaxed text-mineral">{product.warrantyTerms}</dd>
+                  </div>
+                )}
               </dl>
             </article>
           </div>

@@ -14,7 +14,10 @@ export function FloatInput({ label, wrapperClassName, error, ...props }: FloatIn
   return (
     <div className={cn("float-field", wrapperClassName)}>
       <input {...props} id={inputId} placeholder=" " />
-      <label htmlFor={inputId}>{label}</label>
+      <label htmlFor={inputId}>
+        {label}
+        {props.required ? <span className="ml-0.5 text-walnut/80">*</span> : null}
+      </label>
       {error ? <p className="mt-1 text-xs text-walnut">{error}</p> : null}
     </div>
   );
@@ -32,7 +35,10 @@ export function FloatTextarea({ label, wrapperClassName, error, ...props }: Floa
   return (
     <div className={cn("float-field", wrapperClassName)}>
       <textarea {...props} id={textareaId} placeholder=" " />
-      <label htmlFor={textareaId}>{label}</label>
+      <label htmlFor={textareaId}>
+        {label}
+        {props.required ? <span className="ml-0.5 text-walnut/80">*</span> : null}
+      </label>
       {error ? <p className="mt-1 text-xs text-walnut">{error}</p> : null}
     </div>
   );
@@ -57,7 +63,10 @@ export function FloatSelect({
   return (
     <div className={cn("float-field", wrapperClassName)}>
       <select {...props} id={selectId}>{children}</select>
-      <label htmlFor={selectId}>{label}</label>
+      <label htmlFor={selectId}>
+        {label}
+        {props.required ? <span className="ml-0.5 text-walnut/80">*</span> : null}
+      </label>
       {error ? <p className="mt-1 text-xs text-walnut">{error}</p> : null}
     </div>
   );

@@ -1,6 +1,7 @@
 import Link from "next/link";
 
 import { Container } from "@/components/layout/container";
+import { buttonVariants } from "@/components/ui/button";
 import { StatusBadge } from "@/components/ui/status-badge";
 import {
   listAdminInventoryItems,
@@ -89,7 +90,7 @@ export default async function AdminOperationsPage() {
             </div>
             <Link
               href={card.href}
-              className="inline-flex h-9 w-fit items-center rounded-full border border-graphite/16 bg-white/85 px-4 text-xs uppercase tracking-[0.12em] text-graphite transition hover:bg-white"
+              className={buttonVariants({ variant: "secondary", size: "adminSm", className: "w-fit" })}
             >
               {card.cta}
             </Link>

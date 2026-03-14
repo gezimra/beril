@@ -6,7 +6,9 @@ import {
   upsertWatchReferenceAction,
 } from "@/app/admin/actions";
 import { Container } from "@/components/layout/container";
+import { buttonVariants } from "@/components/ui/button";
 import { FloatInput, FloatSelect, FloatTextarea } from "@/components/ui/float-field";
+import { Pagination } from "@/components/ui/pagination";
 import { StatusBadge } from "@/components/ui/status-badge";
 import {
   listAdminInventoryCompatibility,
@@ -31,6 +33,7 @@ function getQueryParam(value: string | string[] | undefined, fallback = "") {
 export default async function AdminWatchDbPage({ searchParams }: AdminWatchDbPageProps) {
   const query = await searchParams;
   const search = getQueryParam(query.search);
+  const page = Math.max(1, parseInt(getQueryParam(query.page, "1"), 10));
 
   const [
     watchBrands,
@@ -40,12 +43,12 @@ export default async function AdminWatchDbPage({ searchParams }: AdminWatchDbPag
     inventoryItems,
     compatibilityRows,
   ] = await Promise.all([
-    listAdminWatchBrands({ search }),
-    listAdminWatchCalibers({ search }),
-    listAdminWatchModels({ search }),
-    listAdminWatchReferences({ search }),
-    listAdminInventoryItems({ search }),
-    listAdminInventoryCompatibility({ search }),
+    listAdminWatchBrands({ search, page }),
+    listAdminWatchCalibers({ search, page }),
+    listAdminWatchModels({ search, page }),
+    listAdminWatchReferences({ search, page }),
+    listAdminInventoryItems({ search, page }),
+    listAdminInventoryCompatibility({ search, page }),
   ]);
 
   return (
@@ -62,7 +65,7 @@ export default async function AdminWatchDbPage({ searchParams }: AdminWatchDbPag
         <FloatInput name="search" defaultValue={search} label="Search by brand, caliber, model, reference" />
         <button
           type="submit"
-          className="inline-flex h-10 items-center justify-center rounded-full bg-walnut px-5 text-xs uppercase tracking-[0.12em] text-white"
+          className={buttonVariants({ variant: "primary", size: "adminMd" })}
         >
           Apply
         </button>
@@ -360,6 +363,13 @@ export default async function AdminWatchDbPage({ searchParams }: AdminWatchDbPag
           </ul>
         </article>
       </section>
+
+      <Pagination
+        page={page}
+        hasMore={watchReferences.length === 40 || watchBrands.length === 40 || watchCalibers.length === 40 || watchModels.length === 40}
+        searchParams={{ search: search || undefined }}
+        className="surface-panel p-4"
+      />
     </Container>
   );
 }

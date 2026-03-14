@@ -10,7 +10,12 @@ import {
   logoutCustomerAccount,
   registerCustomerAccount,
   updateCheckoutProfileForAuthenticatedCustomer,
+  getAuthenticatedCustomerUser,
 } from "@/lib/db/customer-account";
+import {
+  getAffiliateDashboardByEmail,
+  generateAffiliateCouponFromCommission,
+} from "@/lib/db/growth-loyalty";
 import { createSupabaseServerClient } from "@/lib/db/supabase/server";
 import { env } from "@/lib/env";
 import { optionalPhoneInputSchema } from "@/lib/validations/phone";
@@ -193,4 +198,29 @@ export async function customerResetPasswordAction(
   }
 
   return { success: true };
+}
+
+export async function redeemAffiliateCommissionAction() {
+  const user = await getAuthenticatedCustomerUser();
+  if (!user) {
+    redirect("/account/login?next=/account/affiliate");
+  }
+
+  const dashboard = await getAffiliateDashboardByEmail(user.email);
+  if (!dashboard || dashboard.stats.redeemableCommission <= 0) {
+    redirect("/account/affiliate?error=nothing_to_redeem");
+  }
+
+  let couponCode: string;
+  try {
+    couponCode = await generateAffiliateCouponFromCommission({
+      affiliateId: dashboard.affiliate.id,
+      affiliateCode: dashboard.affiliate.code,
+      amount: dashboard.stats.redeemableCommission,
+    });
+  } catch {
+    redirect("/account/affiliate?error=redeem_failed");
+  }
+
+  redirect(`/account/affiliate?coupon=${encodeURIComponent(couponCode)}`);
 }

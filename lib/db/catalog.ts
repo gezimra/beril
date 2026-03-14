@@ -23,6 +23,11 @@ interface ProductRow {
   primary_cta_mode: Product["primaryCtaMode"];
   created_at: string;
   updated_at: string;
+  warranty_months?: number;
+  warranty_terms?: string | null;
+  purchase_price?: number | null;
+  sale_percentage?: number | null;
+  campaign_sale_only?: boolean;
   product_images?: Array<{
     id: string;
     product_id: string;
@@ -79,6 +84,11 @@ function toCamelProduct(row: ProductRow): Product {
     primaryCtaMode: row.primary_cta_mode,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
+    warrantyMonths: row.warranty_months ?? 0,
+    warrantyTerms: row.warranty_terms ?? null,
+    purchasePrice: row.purchase_price ?? null,
+    salePercentage: row.sale_percentage ?? null,
+    campaignSaleOnly: row.campaign_sale_only ?? false,
     images: (row.product_images ?? [])
       .sort((a, b) => a.sort_order - b.sort_order)
       .map((image) => ({
@@ -145,11 +155,16 @@ function applyFilters(
       return false;
     }
 
-    if (filters.price_min !== undefined && product.price < filters.price_min) {
+    const effectivePrice =
+      product.salePercentage && product.salePercentage > 0 && !product.campaignSaleOnly
+        ? product.price * (1 - product.salePercentage / 100)
+        : product.price;
+
+    if (filters.price_min !== undefined && effectivePrice < filters.price_min) {
       return false;
     }
 
-    if (filters.price_max !== undefined && product.price > filters.price_max) {
+    if (filters.price_max !== undefined && effectivePrice > filters.price_max) {
       return false;
     }
 
@@ -158,6 +173,10 @@ function applyFilters(
     }
 
     if (filters.new_arrivals && !product.isNew) {
+      return false;
+    }
+
+    if (filters.on_sale && !(product.salePercentage && product.salePercentage > 0 && !product.campaignSaleOnly)) {
       return false;
     }
 
@@ -233,6 +252,11 @@ async function getProductsFromSupabase(): Promise<Product[] | null> {
       primary_cta_mode,
       created_at,
       updated_at,
+      warranty_months,
+      warranty_terms,
+      purchase_price,
+      sale_percentage,
+      campaign_sale_only,
       product_images(id, product_id, url, alt, sort_order),
       product_specs(id, product_id, key, value, sort_order)
       `,
@@ -270,13 +294,19 @@ export async function getFeaturedProducts(
     .slice(0, limit);
 }
 
+const CATALOG_PAGE_SIZE = 36;
+
 export async function listCatalogProducts(
   category: ProductCategory,
   filters: CatalogSearchQuery,
+  page = 1,
 ) {
   const products = await getProductsSource();
   const filtered = applyFilters(products, category, filters);
-  return sortProducts(filtered, filters.sort);
+  const sorted = sortProducts(filtered, filters.sort);
+  const total = sorted.length;
+  const from = (page - 1) * CATALOG_PAGE_SIZE;
+  return { products: sorted.slice(from, from + CATALOG_PAGE_SIZE), total, hasMore: from + CATALOG_PAGE_SIZE < total };
 }
 
 export async function getProductBySlug(slug: string): Promise<Product | null> {

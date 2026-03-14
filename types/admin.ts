@@ -150,6 +150,11 @@ export interface AdminProductRow {
   imageUrls: string[];
   specs: Array<{ key: string; value: string }>;
   status: "draft" | "active" | "archived";
+  warrantyMonths: number;
+  warrantyTerms: string | null;
+  purchasePrice: number | null;
+  salePercentage: number | null;
+  campaignSaleOnly: boolean;
 }
 
 export interface AdminDashboardStats {

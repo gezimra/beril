@@ -2,7 +2,6 @@ import type { ReactNode } from "react";
 
 import { logoutAction } from "@/app/(auth)/actions";
 import { AdminSidebarNav } from "@/components/admin/admin-sidebar-nav";
-import { Container } from "@/components/layout/container";
 
 export const metadata = {
   robots: {
@@ -13,30 +12,63 @@ export const metadata = {
 
 export default function AdminLayout({ children }: { children: ReactNode }) {
   return (
-    <main id="main-content" className="min-h-screen overflow-x-clip py-3 sm:py-6 lg:py-8">
-      <Container className="grid max-w-[104rem] gap-3 px-3 sm:gap-4 sm:px-6 lg:grid-cols-[16rem_minmax(0,1fr)] lg:gap-6 lg:px-10">
-        <aside className="surface-panel order-2 h-fit p-3 sm:p-4 lg:order-1 lg:p-5">
-          <p className="text-xs uppercase tracking-[0.2em] text-graphite/65">BERIL Admin</p>
+    <div className="admin-shell flex min-h-screen">
+      {/* Desktop sidebar — sticky, full height */}
+      <aside className="hidden lg:block lg:w-52 lg:shrink-0 lg:border-r lg:border-black/8 lg:bg-white">
+        <div className="sticky top-0 flex h-screen flex-col overflow-y-auto px-3 py-4">
+          <p className="px-2 text-[0.62rem] font-semibold uppercase tracking-[0.2em] text-graphite/35">
+            BERIL Admin
+          </p>
           <AdminSidebarNav />
-          <div className="mt-4 flex flex-col gap-2 sm:mt-5 lg:mt-6">
+          <div className="mt-auto space-y-0.5 border-t border-black/7 pt-3">
             <a
               href="/"
-              className="inline-flex h-9 items-center rounded-full border border-graphite/18 bg-white/80 px-4 text-xs uppercase tracking-[0.12em] text-graphite"
+              className="block rounded px-2 py-1.5 text-[0.8rem] text-graphite/72 transition hover:bg-black/[0.04] hover:text-graphite"
             >
               View Shop →
             </a>
             <form action={logoutAction}>
               <button
                 type="submit"
-                className="inline-flex h-9 items-center rounded-full border border-graphite/18 bg-white/80 px-4 text-xs uppercase tracking-[0.12em] text-graphite"
+                className="block w-full rounded px-2 py-1.5 text-left text-[0.8rem] text-graphite/72 transition hover:bg-black/[0.04] hover:text-graphite"
               >
                 Sign out
               </button>
             </form>
           </div>
-        </aside>
-        <section className="order-1 min-w-0 lg:order-2">{children}</section>
-      </Container>
-    </main>
+        </div>
+      </aside>
+
+      {/* Main content */}
+      <div className="flex min-w-0 flex-1 flex-col">
+        <main id="main-content" className="min-w-0 flex-1 p-3 sm:p-5 lg:p-6">
+          {children}
+        </main>
+
+        {/* Mobile sidebar — below content */}
+        <div className="border-t border-black/8 bg-white p-3 sm:p-4 lg:hidden">
+          <p className="px-2 text-[0.62rem] font-semibold uppercase tracking-[0.2em] text-graphite/35">
+            BERIL Admin
+          </p>
+          <AdminSidebarNav />
+          <div className="mt-4 flex gap-2">
+            <a
+              href="/"
+              className="rounded border border-black/10 px-3 py-1.5 text-xs text-graphite/72 transition hover:bg-black/[0.04] hover:text-graphite"
+            >
+              View Shop →
+            </a>
+            <form action={logoutAction}>
+              <button
+                type="submit"
+                className="rounded border border-black/10 px-3 py-1.5 text-xs text-graphite/72 transition hover:bg-black/[0.04] hover:text-graphite"
+              >
+                Sign out
+              </button>
+            </form>
+          </div>
+        </div>
+      </div>
+    </div>
   );
 }

@@ -12,6 +12,7 @@ const navItems = [
   { href: "/account", label: "Overview", exact: true },
   { href: "/account/orders", label: "Orders" },
   { href: "/account/discounts", label: "Discounts" },
+  { href: "/account/affiliate", label: "Referrals" },
 ];
 
 export function AccountNav({ email }: AccountNavProps) {

@@ -17,12 +17,22 @@ function buildSpecs(
   }));
 }
 
-function buildProduct(product: Omit<Product, "images" | "specs" | "createdAt" | "updatedAt"> & {
+function buildProduct(product: Omit<Product, "images" | "specs" | "createdAt" | "updatedAt" | "warrantyMonths" | "warrantyTerms" | "purchasePrice" | "salePercentage" | "campaignSaleOnly"> & {
   imageAlt: string;
   specs: Array<{ key: string; value: string }>;
+  warrantyMonths?: number;
+  warrantyTerms?: string | null;
+  purchasePrice?: number | null;
+  salePercentage?: number | null;
+  campaignSaleOnly?: boolean;
 }): Product {
   return {
     ...product,
+    warrantyMonths: product.warrantyMonths ?? 0,
+    warrantyTerms: product.warrantyTerms ?? null,
+    purchasePrice: product.purchasePrice ?? null,
+    salePercentage: product.salePercentage ?? null,
+    campaignSaleOnly: product.campaignSaleOnly ?? false,
     createdAt: NOW,
     updatedAt: NOW,
     images: [

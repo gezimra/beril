@@ -1,5 +1,6 @@
 import { saveSiteSettingsAction } from "@/app/admin/actions";
 import { Container } from "@/components/layout/container";
+import { buttonVariants } from "@/components/ui/button";
 import { FloatInput, FloatTextarea } from "@/components/ui/float-field";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { getExtendedSiteSettings, listAdminContacts } from "@/lib/db/admin";
@@ -185,7 +186,7 @@ export default async function AdminContentPage() {
 
         <button
           type="submit"
-          className="sm:col-span-2 inline-flex h-10 items-center justify-center rounded-full bg-walnut px-5 text-xs uppercase tracking-[0.12em] text-white"
+          className={buttonVariants({ variant: "primary", size: "adminMd", className: "sm:col-span-2" })}
         >
           Save Content
         </button>

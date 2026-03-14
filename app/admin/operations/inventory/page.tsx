@@ -5,7 +5,9 @@ import {
   upsertSupplierAction,
 } from "@/app/admin/actions";
 import { Container } from "@/components/layout/container";
+import { buttonVariants } from "@/components/ui/button";
 import { FloatInput, FloatSelect, FloatTextarea } from "@/components/ui/float-field";
+import { Pagination } from "@/components/ui/pagination";
 import { PhoneInput } from "@/components/ui/phone-input";
 import { StatusBadge } from "@/components/ui/status-badge";
 import {
@@ -32,12 +34,13 @@ export default async function AdminInventoryPage({ searchParams }: AdminInventor
   const query = await searchParams;
   const search = getQueryParam(query.search);
   const status = getQueryParam(query.status);
+  const page = Math.max(1, parseInt(getQueryParam(query.page, "1"), 10));
 
   const [suppliers, purchaseOrders, inventoryItems, stockMovements] = await Promise.all([
-    listAdminSuppliers({ search }),
-    listAdminPurchaseOrders({ search, status }),
-    listAdminInventoryItems({ search }),
-    listAdminStockMovements({ search }),
+    listAdminSuppliers({ search, page }),
+    listAdminPurchaseOrders({ search, status, page }),
+    listAdminInventoryItems({ search, page }),
+    listAdminStockMovements({ search, page }),
   ]);
 
   const lowStockItems = inventoryItems.filter(
@@ -83,7 +86,7 @@ export default async function AdminInventoryPage({ searchParams }: AdminInventor
         </FloatSelect>
         <button
           type="submit"
-          className="inline-flex h-10 items-center justify-center rounded-full bg-walnut px-5 text-xs uppercase tracking-[0.12em] text-white"
+          className={buttonVariants({ variant: "primary", size: "adminMd" })}
         >
           Apply
         </button>
@@ -322,6 +325,13 @@ export default async function AdminInventoryPage({ searchParams }: AdminInventor
           </ul>
         </article>
       </section>
+
+      <Pagination
+        page={page}
+        hasMore={inventoryItems.length === 40 || stockMovements.length === 40}
+        searchParams={{ search: search || undefined, status: status || undefined }}
+        className="surface-panel p-4"
+      />
     </Container>
   );
 }

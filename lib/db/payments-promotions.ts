@@ -23,7 +23,10 @@ import type {
 interface ListFilterParams {
   search?: string;
   status?: string;
+  page?: number;
 }
+
+const PAGE_SIZE_TRANSACTIONS = 30;
 
 interface UpsertCampaignInput {
   id?: string;
@@ -164,6 +167,7 @@ function toPaymentStatus(status: PaymentTransactionStatus): PaymentStatus {
 export async function listAdminCampaigns({
   search,
   status,
+  page = 1,
 }: ListFilterParams = {}): Promise<AdminCampaign[]> {
   const serviceClient = createSupabaseServiceClient();
   if (!serviceClient) {
@@ -174,13 +178,16 @@ export async function listAdminCampaigns({
       );
   }
 
+  const from = (page - 1) * PAGE_SIZE_TRANSACTIONS;
+  const to = from + PAGE_SIZE_TRANSACTIONS - 1;
+
   let query = serviceClient
     .from("campaigns")
     .select(
       "id, name, slug, description, status, starts_at, ends_at, budget, created_at, updated_at",
     )
     .order("created_at", { ascending: false })
-    .limit(100);
+    .range(from, to);
 
   if (status) {
     query = query.eq("status", status);
@@ -275,6 +282,7 @@ export async function upsertAdminCampaign(input: UpsertCampaignInput) {
 export async function listAdminPromotions({
   search,
   status,
+  page = 1,
 }: ListFilterParams = {}): Promise<AdminPromotion[]> {
   const serviceClient = createSupabaseServiceClient();
   if (!serviceClient) {
@@ -283,13 +291,16 @@ export async function listAdminPromotions({
       .filter((promotion) => includesSearch(promotion.name, search));
   }
 
+  const from = (page - 1) * PAGE_SIZE_TRANSACTIONS;
+  const to = from + PAGE_SIZE_TRANSACTIONS - 1;
+
   let query = serviceClient
     .from("promotions")
     .select(
       "id, campaign_id, name, status, type, scope, percentage_off, amount_off, min_order_total, is_stackable, starts_at, ends_at, created_at, updated_at",
     )
     .order("created_at", { ascending: false })
-    .limit(120);
+    .range(from, to);
 
   if (status) {
     query = query.eq("status", status);
@@ -400,6 +411,7 @@ export async function upsertAdminPromotion(input: UpsertPromotionInput) {
 export async function listAdminCoupons({
   search,
   status,
+  page = 1,
 }: ListFilterParams = {}): Promise<AdminCoupon[]> {
   const serviceClient = createSupabaseServiceClient();
   if (!serviceClient) {
@@ -408,13 +420,16 @@ export async function listAdminCoupons({
       .filter((coupon) => includesSearch(coupon.code, search));
   }
 
+  const from = (page - 1) * PAGE_SIZE_TRANSACTIONS;
+  const to = from + PAGE_SIZE_TRANSACTIONS - 1;
+
   let query = serviceClient
     .from("coupon_codes")
     .select(
       "id, promotion_id, code, status, usage_limit, usage_count, per_customer_limit, starts_at, ends_at, created_at, updated_at",
     )
     .order("created_at", { ascending: false })
-    .limit(200);
+    .range(from, to);
 
   if (status) {
     query = query.eq("status", status);
@@ -969,6 +984,7 @@ export async function listCustomerCouponsForUser(input: {
 export async function listAdminPaymentTransactions({
   search,
   status,
+  page = 1,
 }: ListFilterParams = {}): Promise<AdminPaymentTransaction[]> {
   const serviceClient = createSupabaseServiceClient();
   if (!serviceClient) {
@@ -982,13 +998,16 @@ export async function listAdminPaymentTransactions({
       );
   }
 
+  const from = (page - 1) * PAGE_SIZE_TRANSACTIONS;
+  const to = from + PAGE_SIZE_TRANSACTIONS - 1;
+
   let query = serviceClient
     .from("payment_transactions")
     .select(
       "id, order_id, provider, method, status, amount, currency, provider_reference, created_at, updated_at",
     )
     .order("created_at", { ascending: false })
-    .limit(200);
+    .range(from, to);
 
   if (status) {
     query = query.eq("status", status);

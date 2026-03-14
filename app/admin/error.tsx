@@ -2,6 +2,8 @@
 
 import { useEffect } from "react";
 
+import { buttonVariants } from "@/components/ui/button";
+
 export default function AdminError({
   error,
   reset,
@@ -27,7 +29,7 @@ export default function AdminError({
       )}
       <button
         onClick={reset}
-        className="mt-5 inline-flex h-10 items-center rounded-full bg-mineral-green px-6 text-sm font-medium uppercase tracking-wider text-white transition-colors hover:bg-mineral-green/90"
+        className={buttonVariants({ variant: "primary", className: "mt-5 h-10" })}
       >
         Try again
       </button>

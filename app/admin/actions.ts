@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
 import { z } from "zod";
 
 import { verifyAdminSession } from "@/lib/admin-auth";
@@ -16,6 +17,8 @@ import {
   updateAdminRepairNotes,
   updateAdminRepairStatus,
   updateAdminSiteSetting,
+  addAdminProductImageUrl,
+  deleteAdminProductImage,
   uploadAdminHeroSlideImage,
   uploadAdminProductGalleryImage,
   uploadAdminProductPrimaryImage,
@@ -47,6 +50,7 @@ import {
   upsertAdminWatchModel,
   upsertAdminWatchReference,
   upsertAdminWorkOrder,
+  upsertServiceItem,
 } from "@/lib/db/inventory-ops";
 import {
   assignCouponToCustomerByEmail,
@@ -181,6 +185,20 @@ const upsertProductSchema = z.object({
   imageUrlsRaw: z.string().trim().optional(),
   specsRaw: z.string().trim().optional(),
   status: z.enum(["draft", "active", "archived"]),
+  warrantyMonths: z.preprocess(
+    (value) => (value === "" || value === null ? undefined : value),
+    z.coerce.number().int().nonnegative().optional(),
+  ),
+  warrantyTerms: z.string().trim().optional(),
+  purchasePrice: z.preprocess(
+    (value) => (value === "" || value === null ? undefined : value),
+    z.coerce.number().nonnegative().optional(),
+  ),
+  salePercentage: z.preprocess(
+    (value) => (value === "" || value === null ? undefined : value),
+    z.coerce.number().min(0).max(100).optional(),
+  ),
+  campaignSaleOnly: z.enum(["true", "false"]).default("false"),
 });
 
 const upsertJournalPostSchema = z.object({
@@ -463,6 +481,8 @@ const createManualRepairRequestItemSchema = z.object({
   itemType: z.enum(["watch", "eyewear", "other"]),
   brand: z.string().trim().min(1),
   model: z.string().trim().min(1),
+  serialNumber: z.string().trim().optional(),
+  serviceItemId: z.string().trim().optional(),
   serviceType: z.string().trim().min(2),
   description: z.string().trim().min(6),
 });
@@ -856,6 +876,11 @@ export async function upsertProductAction(formData: FormData) {
     imageUrlsRaw: formData.get("imageUrlsRaw") || undefined,
     specsRaw: formData.get("specsRaw") || undefined,
     status: formData.get("status"),
+    warrantyMonths: formData.get("warrantyMonths") || undefined,
+    warrantyTerms: formData.get("warrantyTerms") || undefined,
+    purchasePrice: formData.get("purchasePrice") || undefined,
+    salePercentage: formData.get("salePercentage") || undefined,
+    campaignSaleOnly: formData.get("campaignSaleOnly") ? "true" : "false",
   });
 
   await upsertAdminProduct({
@@ -874,6 +899,11 @@ export async function upsertProductAction(formData: FormData) {
     imageUrls: parseImageUrlsRaw(payload.imageUrlsRaw),
     specs: parseSpecsRaw(payload.specsRaw),
     status: payload.status,
+    warrantyMonths: payload.warrantyMonths ?? 0,
+    warrantyTerms: payload.warrantyTerms ?? null,
+    purchasePrice: payload.purchasePrice ?? null,
+    salePercentage: payload.salePercentage ?? null,
+    campaignSaleOnly: payload.campaignSaleOnly === "true",
   });
   revalidatePath("/admin");
   revalidatePath("/admin/products");
@@ -1062,6 +1092,29 @@ export async function uploadProductGalleryImageAction(formData: FormData) {
   revalidatePath("/admin");
   revalidatePath("/admin/products");
   revalidatePath("/");
+  revalidatePath("/watches");
+  revalidatePath("/eyewear");
+  revalidatePath("/products/[slug]", "page");
+}
+
+export async function deleteProductImageAction(formData: FormData) {
+  await verifyAdminSession();
+  const productId = z.string().min(1).parse(formData.get("productId"));
+  const imageUrl = z.string().url().parse(formData.get("imageUrl"));
+  await deleteAdminProductImage(productId, imageUrl);
+  revalidatePath("/admin/products");
+  revalidatePath("/watches");
+  revalidatePath("/eyewear");
+  revalidatePath("/products/[slug]", "page");
+}
+
+export async function addProductImageUrlAction(formData: FormData) {
+  await verifyAdminSession();
+  const productId = z.string().min(1).parse(formData.get("productId"));
+  const imageUrl = z.string().url().parse(formData.get("imageUrl"));
+  const imageAlt = z.string().trim().optional().parse(formData.get("imageAlt") || undefined);
+  await addAdminProductImageUrl(productId, imageUrl, imageAlt ?? "");
+  revalidatePath("/admin/products");
   revalidatePath("/watches");
   revalidatePath("/eyewear");
   revalidatePath("/products/[slug]", "page");
@@ -1461,9 +1514,9 @@ export async function createManualOrderAction(formData: FormData) {
     paymentStatus: payload.paymentStatus ?? "pending",
     orderStatus: payload.orderStatus ?? "pending",
   });
-  revalidatePath(returnTo);
   revalidateOperationsModules();
   revalidatePath("/admin/orders");
+  redirect(returnTo);
 }
 
 export async function createManualRepairRequestAction(formData: FormData) {
@@ -1491,6 +1544,12 @@ export async function createManualRepairRequestAction(formData: FormData) {
   const models = formData
     .getAll("serviceItemModel")
     .map((value) => (typeof value === "string" ? value : ""));
+  const serialNumbers = formData
+    .getAll("serviceItemSerialNumber")
+    .map((value) => (typeof value === "string" ? value : ""));
+  const serviceItemIds = formData
+    .getAll("serviceItemId")
+    .map((value) => (typeof value === "string" ? value : ""));
   const serviceTypes = formData
     .getAll("serviceItemServiceType")
     .map((value) => (typeof value === "string" ? value : ""));
@@ -1504,6 +1563,8 @@ export async function createManualRepairRequestAction(formData: FormData) {
           itemType,
           brand: brands[index] || "",
           model: models[index] || "",
+          serialNumber: serialNumbers[index] || undefined,
+          serviceItemId: serviceItemIds[index] || undefined,
           serviceType: serviceTypes[index] || "",
           description: descriptions[index] || "",
         }))
@@ -1520,9 +1581,20 @@ export async function createManualRepairRequestAction(formData: FormData) {
   const itemPayloads = z.array(createManualRepairRequestItemSchema).min(1).parse(itemPayloadRaw);
 
   for (const itemPayload of itemPayloads) {
+    // Find or create the physical item record for history tracking
+    const serviceItemId = await upsertServiceItem({
+      serviceItemId: itemPayload.serviceItemId || null,
+      itemType: itemPayload.itemType,
+      brand: itemPayload.brand,
+      model: itemPayload.model,
+      serialNumber: itemPayload.serialNumber || null,
+    });
+
     await createManualAdminRepairRequest({
       ...sharedPayload,
       ...itemPayload,
+      serialNumber: itemPayload.serialNumber || null,
+      serviceItemId,
       email: sharedPayload.email || null,
       preferredContactMethod: sharedPayload.preferredContactMethod ?? "phone",
       dropOffMethod: sharedPayload.dropOffMethod ?? "already_dropped_off",
@@ -1530,9 +1602,9 @@ export async function createManualRepairRequestAction(formData: FormData) {
       status: sharedPayload.status ?? "request_received",
     });
   }
-  revalidatePath(returnTo);
   revalidateOperationsModules();
   revalidatePath("/admin/repairs");
+  redirect(returnTo);
 }
 
 export async function upsertWatchBrandAction(formData: FormData) {

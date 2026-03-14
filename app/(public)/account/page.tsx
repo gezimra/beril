@@ -36,6 +36,9 @@ export default async function AccountOverviewPage() {
           <Link href="/account/register" className={buttonVariants({ variant: "secondary", className: "h-10" })}>
             Register
           </Link>
+          <Link href="/orders/track" className={buttonVariants({ variant: "secondary", className: "h-10" })}>
+            Track my order
+          </Link>
         </div>
       </article>
     );

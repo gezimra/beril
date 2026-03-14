@@ -1,12 +1,13 @@
-import {
-  uploadProductGalleryImageAction,
-  uploadProductPrimaryImageAction,
-  upsertProductAction,
-} from "@/app/admin/actions";
+import { upsertProductAction } from "@/app/admin/actions";
+import { AdminProductsGrid } from "@/components/admin/admin-products-grid";
+import { ProductSpecsField } from "@/components/admin/product-specs-field";
 import { Container } from "@/components/layout/container";
+import { buttonVariants } from "@/components/ui/button";
+import { FloatComboboxField } from "@/components/ui/float-combobox-field";
 import { FloatInput, FloatSelect, FloatTextarea } from "@/components/ui/float-field";
+import { Pagination } from "@/components/ui/pagination";
 import { StatusBadge } from "@/components/ui/status-badge";
-import { listAdminProducts } from "@/lib/db/admin";
+import { listAdminBrandSuggestions, listAdminProducts } from "@/lib/db/admin";
 import { formatStatusLabel } from "@/lib/utils/status-label";
 import { stockStatuses } from "@/types/domain";
 
@@ -30,7 +31,11 @@ export default async function AdminProductsPage({
   const query = await searchParams;
   const search = getQueryParam(query.search);
   const status = getQueryParam(query.status);
-  const products = await listAdminProducts({ search, status });
+  const page = Math.max(1, parseInt(getQueryParam(query.page, "1"), 10));
+  const [products, brandSuggestions] = await Promise.all([
+    listAdminProducts({ search, status, page }),
+    listAdminBrandSuggestions(),
+  ]);
 
   return (
     <Container className="space-y-6">
@@ -51,10 +56,11 @@ export default async function AdminProductsPage({
           required
           label="Title"
         />
-        <FloatInput
+        <FloatComboboxField
           name="brand"
           required
           label="Brand"
+          suggestions={brandSuggestions}
         />
         <FloatSelect
           name="category"
@@ -70,7 +76,22 @@ export default async function AdminProductsPage({
           min="0"
           step="0.01"
           required
-          label="Price EUR"
+          label="Selling price EUR"
+        />
+        <FloatInput
+          name="purchasePrice"
+          type="number"
+          min="0"
+          step="0.01"
+          label="Purchase price EUR"
+        />
+        <FloatInput
+          name="salePercentage"
+          type="number"
+          min="0"
+          max="100"
+          step="0.1"
+          label="Sale % (discount)"
         />
         <FloatSelect
           name="stockStatus"
@@ -90,16 +111,27 @@ export default async function AdminProductsPage({
           label="Quantity"
         />
         <FloatInput
+          name="warrantyMonths"
+          type="number"
+          min="0"
+          label="Warranty (months)"
+          defaultValue={12}
+        />
+        <FloatTextarea
+          name="warrantyTerms"
+          label="Warranty terms (optional)"
+          rows={2}
+          wrapperClassName="sm:col-span-2"
+        />
+        <FloatInput
           name="primaryImageAlt"
           label="Primary image alt text"
           wrapperClassName="sm:col-span-2"
         />
-        <FloatTextarea
-          name="specsRaw"
-          rows={4}
-          label="Specs (one per line)"
-          wrapperClassName="sm:col-span-2"
-        />
+        <div className="sm:col-span-2">
+          <p className="mb-1.5 text-xs uppercase tracking-[0.12em] text-graphite/50">Specs</p>
+          <ProductSpecsField defaultSpecs={[]} />
+        </div>
         <FloatSelect
           name="status"
           defaultValue="active"
@@ -119,7 +151,7 @@ export default async function AdminProductsPage({
           <option value="whatsapp_inquiry">WhatsApp Inquiry</option>
           <option value="request_availability">Request Availability</option>
         </FloatSelect>
-        <div className="flex items-center gap-4">
+        <div className="flex flex-wrap items-center gap-4 sm:col-span-2">
           <label className="flex items-center gap-2 text-sm text-graphite/74">
             <input type="checkbox" name="featured" />
             featured
@@ -128,10 +160,14 @@ export default async function AdminProductsPage({
             <input type="checkbox" name="isNew" />
             new
           </label>
+          <label className="flex items-center gap-2 text-sm text-graphite/74">
+            <input type="checkbox" name="campaignSaleOnly" />
+            campaign overrides sale %
+          </label>
         </div>
         <button
           type="submit"
-          className="sm:col-span-2 inline-flex h-10 items-center justify-center rounded-full bg-walnut px-5 text-xs uppercase tracking-[0.12em] text-white"
+          className={buttonVariants({ variant: "primary", size: "adminMd", className: "sm:col-span-2" })}
         >
           Create Product
         </button>
@@ -155,197 +191,26 @@ export default async function AdminProductsPage({
         </FloatSelect>
         <button
           type="submit"
-          className="inline-flex h-10 items-center justify-center rounded-full bg-mineral px-5 text-xs uppercase tracking-[0.12em] text-white"
+          className={buttonVariants({ variant: "mineral", size: "adminMd" })}
         >
           Apply
         </button>
       </form>
 
-      <div className="space-y-3">
-        {products.length === 0 ? (
-          <div className="surface-panel p-6 text-sm text-graphite/75">
-            No products found for current filters.
-          </div>
-        ) : (
-          products.map((product) => (
-            <article key={product.id} className="surface-panel p-4">
-              <form action={upsertProductAction} className="grid gap-3 md:grid-cols-10">
-                <input type="hidden" name="id" value={product.id} />
-                <FloatInput
-                  name="title"
-                  defaultValue={product.title}
-                  label="Title"
-                  wrapperClassName="md:col-span-2"
-                />
-                <FloatInput
-                  name="brand"
-                  defaultValue={product.brand}
-                  label="Brand"
-                />
-                <FloatSelect
-                  name="category"
-                  defaultValue={product.category}
-                  label="Category"
-                >
-                  <option value="watch">watch</option>
-                  <option value="eyewear">eyewear</option>
-                </FloatSelect>
-                <FloatInput
-                  name="price"
-                  type="number"
-                  min="0"
-                  step="0.01"
-                  defaultValue={product.price}
-                  label="Price"
-                />
-                <FloatSelect
-                  name="stockStatus"
-                  defaultValue={product.stockStatus}
-                  label="Stock Status"
-                >
-                  {stockStatuses.map((item) => (
-                    <option key={item} value={item}>
-                      {formatStatusLabel(item)}
-                    </option>
-                  ))}
-                </FloatSelect>
-                <FloatInput
-                  name="quantity"
-                  type="number"
-                  min="0"
-                  defaultValue={product.quantity ?? ""}
-                  label="Quantity"
-                />
-                <FloatSelect
-                  name="status"
-                  defaultValue={product.status}
-                  label="Status"
-                >
-                  <option value="draft">Draft</option>
-                  <option value="active">Active</option>
-                  <option value="archived">Archived</option>
-                </FloatSelect>
-                <FloatSelect
-                  name="primaryCtaMode"
-                  defaultValue={product.primaryCtaMode}
-                  label="Primary CTA Mode"
-                >
-                  <option value="add_to_cart">Add To Cart</option>
-                  <option value="reserve_in_store">Reserve In Store</option>
-                  <option value="whatsapp_inquiry">WhatsApp Inquiry</option>
-                  <option value="request_availability">Request Availability</option>
-                </FloatSelect>
-                <FloatInput
-                  name="primaryImageAlt"
-                  defaultValue={product.primaryImageAlt ?? ""}
-                  label="Primary image alt"
-                  wrapperClassName="md:col-span-2"
-                />
-                <FloatTextarea
-                  name="specsRaw"
-                  rows={3}
-                  defaultValue={product.specs
-                    .map((spec) => `${spec.key}: ${spec.value}`)
-                    .join("\n")}
-                  label="Specs (one per line)"
-                  wrapperClassName="md:col-span-4"
-                />
-                <div className="md:col-span-2 flex items-center gap-4">
-                  <label className="flex items-center gap-2 text-sm text-graphite/74">
-                    <input type="checkbox" name="featured" defaultChecked={product.featured} />
-                    featured
-                  </label>
-                  <label className="flex items-center gap-2 text-sm text-graphite/74">
-                    <input type="checkbox" name="isNew" defaultChecked={product.isNew} />
-                    new
-                  </label>
-                </div>
-                <button
-                  type="submit"
-                  className="md:col-span-2 inline-flex h-10 items-center justify-center rounded-full border border-graphite/18 bg-white/85 px-4 text-xs uppercase tracking-[0.12em] text-graphite"
-                >
-                  Save
-                </button>
-              </form>
+      {products.length === 0 ? (
+        <div className="surface-panel p-6 text-sm text-graphite/75">
+          No products found for current filters.
+        </div>
+      ) : (
+        <AdminProductsGrid products={products} brandSuggestions={brandSuggestions} />
+      )}
 
-              <form
-                action={uploadProductPrimaryImageAction}
-                className="mt-3 grid gap-2 rounded-lg border border-graphite/12 bg-white/70 p-3 md:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto]"
-              >
-                <input type="hidden" name="productId" value={product.id} />
-                <FloatInput
-                  name="imageAlt"
-                  defaultValue={product.primaryImageAlt ?? `${product.title} product image`}
-                  label="Primary image alt text"
-                />
-                <input
-                  type="file"
-                  name="primaryImageFile"
-                  accept="image/*"
-                  required
-                  className="rounded-lg border border-graphite/18 bg-white/85 px-3 py-2 text-xs"
-                />
-                <button
-                  type="submit"
-                  className="inline-flex h-10 items-center justify-center rounded-full border border-graphite/18 bg-white/85 px-4 text-xs uppercase tracking-[0.12em] text-graphite"
-                >
-                  Upload Image
-                </button>
-                {product.primaryImageUrl ? (
-                  <a
-                    href={product.primaryImageUrl}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="md:col-span-3 text-xs text-graphite/72 underline"
-                  >
-                    Current image
-                  </a>
-                ) : null}
-              </form>
-
-              <form
-                action={uploadProductGalleryImageAction}
-                className="mt-2 grid gap-2 rounded-lg border border-graphite/12 bg-white/70 p-3 md:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto]"
-              >
-                <input type="hidden" name="productId" value={product.id} />
-                <FloatInput
-                  name="imageAlt"
-                  defaultValue={`${product.title} gallery image`}
-                  label="Gallery image alt text"
-                />
-                <input
-                  type="file"
-                  name="galleryImageFile"
-                  accept="image/*"
-                  required
-                  className="rounded-lg border border-graphite/18 bg-white/85 px-3 py-2 text-xs"
-                />
-                <button
-                  type="submit"
-                  className="inline-flex h-10 items-center justify-center rounded-full border border-graphite/18 bg-white/85 px-4 text-xs uppercase tracking-[0.12em] text-graphite"
-                >
-                  Add Gallery Image
-                </button>
-                {product.imageUrls.length > 0 ? (
-                  <div className="md:col-span-3 flex flex-wrap gap-2">
-                    {product.imageUrls.map((url, index) => (
-                      <a
-                        key={url}
-                        href={url}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="text-xs text-graphite/72 underline"
-                      >
-                        Image {index + 1}
-                      </a>
-                    ))}
-                  </div>
-                ) : null}
-              </form>
-            </article>
-          ))
-        )}
-      </div>
+      <Pagination
+        page={page}
+        hasMore={products.length === 40}
+        searchParams={{ search: search || undefined, status: status || undefined }}
+        className="surface-panel p-4"
+      />
     </Container>
   );
 }

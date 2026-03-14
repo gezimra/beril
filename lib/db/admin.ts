@@ -1,5 +1,6 @@
 import { createSupabaseServiceClient } from "@/lib/db/supabase/service";
 import { syncOrderCashbookByOrderId } from "@/lib/db/order-cashbook-sync";
+import { autoCreateWarrantyServiceItems } from "@/lib/db/inventory-ops";
 import {
   addFallbackRepairAttachment,
   addFallbackContact,
@@ -48,7 +49,17 @@ import type { SiteSettings } from "@/types/site-settings";
 interface ListFilterParams {
   search?: string;
   status?: string;
+  page?: number;
 }
+
+const PAGE_SIZES = {
+  products: 40,
+  orders: 20,
+  repairs: 20,
+  contacts: 30,
+  journal: 30,
+  customers: 30,
+} as const;
 
 type OrderRow = {
   id: string;
@@ -274,6 +285,11 @@ function productToAdminRow(product: Product): AdminProductRow {
       .sort((a, b) => a.sortOrder - b.sortOrder)
       .map((spec) => ({ key: spec.key, value: spec.value })),
     status: product.status,
+    warrantyMonths: 0,
+    warrantyTerms: null,
+    purchasePrice: null,
+    salePercentage: null,
+    campaignSaleOnly: false,
   };
 }
 
@@ -609,6 +625,7 @@ export async function searchAdminCustomerLookup({
 export async function listAdminOrders({
   search,
   status,
+  page = 1,
 }: ListFilterParams = {}): Promise<AdminOrder[]> {
   const serviceClient = createSupabaseServiceClient();
   if (!serviceClient) {
@@ -624,6 +641,10 @@ export async function listAdminOrders({
       );
   }
 
+  const pageSize = PAGE_SIZES.orders;
+  const from = (page - 1) * pageSize;
+  const to = from + pageSize - 1;
+
   let query = serviceClient
     .from("orders")
     .select(
@@ -636,7 +657,7 @@ export async function listAdminOrders({
     `,
     )
     .order("created_at", { ascending: false })
-    .limit(150);
+    .range(from, to);
 
   if (status && ORDER_STATUSES.includes(status as OrderStatus)) {
     query = query.eq("order_status", status);
@@ -692,6 +713,11 @@ export async function updateAdminOrderStatus(
   }
 
   await syncOrderCashbookByOrderId(orderId);
+
+  // Auto-create service_items with warranty context for products that carry one
+  if (status === "completed" || status === "delivered") {
+    await autoCreateWarrantyServiceItems(orderId);
+  }
 }
 
 export async function updateAdminOrderPaymentStatus(orderId: string, paymentStatus: PaymentStatus) {
@@ -733,6 +759,7 @@ export async function updateAdminOrderInternalNotes(orderId: string, notes: stri
 export async function listAdminRepairs({
   search,
   status,
+  page = 1,
 }: ListFilterParams = {}): Promise<AdminRepair[]> {
   const serviceClient = createSupabaseServiceClient();
   if (!serviceClient) {
@@ -748,6 +775,10 @@ export async function listAdminRepairs({
       );
   }
 
+  const pageSize = PAGE_SIZES.repairs;
+  const from = (page - 1) * pageSize;
+  const to = from + pageSize - 1;
+
   let query = serviceClient
     .from("repair_requests")
     .select(
@@ -759,7 +790,7 @@ export async function listAdminRepairs({
     `,
     )
     .order("created_at", { ascending: false })
-    .limit(200);
+    .range(from, to);
 
   if (status && REPAIR_STATUSES.includes(status as RepairStatus)) {
     query = query.eq("status", status);
@@ -927,6 +958,7 @@ export async function addAdminRepairAttachment(input: {
 export async function listAdminProducts({
   search,
   status,
+  page = 1,
 }: ListFilterParams = {}): Promise<AdminProductRow[]> {
   const serviceClient = createSupabaseServiceClient();
   if (!serviceClient) {
@@ -940,17 +972,22 @@ export async function listAdminProducts({
       .map(productToAdminRow);
   }
 
+  const pageSize = PAGE_SIZES.products;
+  const from = (page - 1) * pageSize;
+  const to = from + pageSize - 1;
+
   let query = serviceClient
     .from("products")
     .select(
       `
-      id, slug, title, brand, category, price, stock_status, quantity, featured, is_new, primary_cta_mode, status,
+      id, slug, title, brand, category, price, purchase_price, sale_percentage, campaign_sale_only, stock_status, quantity, featured, is_new, primary_cta_mode, status,
+      warranty_months, warranty_terms,
       product_images(url, alt, sort_order),
       product_specs(key, value, sort_order)
       `,
     )
     .order("updated_at", { ascending: false })
-    .limit(200);
+    .range(from, to);
 
   if (status && PRODUCT_STATUSES.includes(status as (typeof PRODUCT_STATUSES)[number])) {
     query = query.eq("status", status);
@@ -997,6 +1034,11 @@ export async function listAdminProducts({
         value: String(spec.value),
       })),
     status: row.status as AdminProductRow["status"],
+    warrantyMonths: Number(row.warranty_months ?? 0),
+    warrantyTerms: (row.warranty_terms as string | null) ?? null,
+    purchasePrice: row.purchase_price != null ? Number(row.purchase_price) : null,
+    salePercentage: row.sale_percentage != null ? Number(row.sale_percentage) : null,
+    campaignSaleOnly: Boolean(row.campaign_sale_only ?? false),
   }));
 }
 
@@ -1025,6 +1067,11 @@ export async function upsertAdminProduct(input: {
   imageUrls?: string[];
   specs?: Array<{ key: string; value: string }>;
   status: "draft" | "active" | "archived";
+  warrantyMonths?: number;
+  warrantyTerms?: string | null;
+  purchasePrice?: number | null;
+  salePercentage?: number | null;
+  campaignSaleOnly?: boolean;
 }) {
   const serviceClient = createSupabaseServiceClient();
   const slugBase = slugify(`${input.brand}-${input.title}`);
@@ -1108,6 +1155,11 @@ export async function upsertAdminProduct(input: {
       isNew: input.isNew,
       status: input.status,
       primaryCtaMode: input.primaryCtaMode,
+      warrantyMonths: input.warrantyMonths ?? 0,
+      warrantyTerms: input.warrantyTerms ?? null,
+      purchasePrice: input.purchasePrice ?? null,
+      salePercentage: input.salePercentage ?? null,
+      campaignSaleOnly: input.campaignSaleOnly ?? false,
       createdAt: nowIso(),
       updatedAt: nowIso(),
       images: [
@@ -1165,6 +1217,11 @@ export async function upsertAdminProduct(input: {
         is_new: input.isNew,
         primary_cta_mode: input.primaryCtaMode,
         status: input.status,
+        warranty_months: input.warrantyMonths ?? 0,
+        warranty_terms: input.warrantyTerms ?? null,
+        purchase_price: input.purchasePrice ?? null,
+        sale_percentage: input.salePercentage ?? null,
+        campaign_sale_only: input.campaignSaleOnly ?? false,
       })
       .eq("id", input.id);
 
@@ -1262,6 +1319,11 @@ export async function upsertAdminProduct(input: {
       is_new: input.isNew,
       status: input.status,
       primary_cta_mode: input.primaryCtaMode,
+      warranty_months: input.warrantyMonths ?? 0,
+      warranty_terms: input.warrantyTerms ?? null,
+      purchase_price: input.purchasePrice ?? null,
+      sale_percentage: input.salePercentage ?? null,
+      campaign_sale_only: input.campaignSaleOnly ?? false,
     })
     .select("id")
     .single();
@@ -1494,9 +1556,60 @@ export async function uploadAdminProductGalleryImage(input: {
   }
 }
 
+export async function deleteAdminProductImage(productId: string, imageUrl: string) {
+  const serviceClient = createSupabaseServiceClient();
+  if (!serviceClient) return;
+
+  const { error } = await serviceClient
+    .from("product_images")
+    .delete()
+    .eq("product_id", productId)
+    .eq("url", imageUrl);
+
+  if (error) throw new Error(error.message);
+
+  // If stored in Supabase storage, delete the file too
+  const storageMarker = "/storage/v1/object/public/products/";
+  if (imageUrl.includes(storageMarker)) {
+    const path = imageUrl.split(storageMarker)[1];
+    if (path) {
+      await serviceClient.storage.from("products").remove([path]);
+    }
+  }
+}
+
+export async function addAdminProductImageUrl(
+  productId: string,
+  url: string,
+  alt: string,
+) {
+  const serviceClient = createSupabaseServiceClient();
+  if (!serviceClient) return;
+
+  const { data: maxRow } = await serviceClient
+    .from("product_images")
+    .select("sort_order")
+    .eq("product_id", productId)
+    .order("sort_order", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  const nextSortOrder = (maxRow?.sort_order ?? 0) + 1;
+
+  const { error } = await serviceClient.from("product_images").insert({
+    product_id: productId,
+    url: url.trim(),
+    alt: alt.trim() || `Product image ${nextSortOrder}`,
+    sort_order: nextSortOrder,
+  });
+
+  if (error) throw new Error(error.message);
+}
+
 export async function listAdminContacts({
   search,
-}: Pick<ListFilterParams, "search"> = {}): Promise<AdminContact[]> {
+  page = 1,
+}: Pick<ListFilterParams, "search" | "page"> = {}): Promise<AdminContact[]> {
   const serviceClient = createSupabaseServiceClient();
   if (!serviceClient) {
     return getFallbackContacts().filter((contact) =>
@@ -1507,11 +1620,15 @@ export async function listAdminContacts({
     );
   }
 
+  const pageSize = PAGE_SIZES.contacts;
+  const from = (page - 1) * pageSize;
+  const to = from + pageSize - 1;
+
   let query = serviceClient
     .from("contacts")
     .select("id, name, email, phone, subject, message, created_at")
     .order("created_at", { ascending: false })
-    .limit(300);
+    .range(from, to);
 
   if (search) {
     query = query.or(
@@ -1574,6 +1691,7 @@ export async function createContactInquiry(input: {
 export async function listAdminJournalPosts({
   search,
   status,
+  page = 1,
 }: ListFilterParams = {}): Promise<AdminJournalPost[]> {
   const serviceClient = createSupabaseServiceClient();
   if (!serviceClient) {
@@ -1582,13 +1700,17 @@ export async function listAdminJournalPosts({
       .filter((post) => includesSearch(`${post.title} ${post.slug}`, search));
   }
 
+  const pageSize = PAGE_SIZES.journal;
+  const from = (page - 1) * pageSize;
+  const to = from + pageSize - 1;
+
   let query = serviceClient
     .from("journal_posts")
     .select(
       "id, slug, title, excerpt, content, cover_image, status, published_at, created_at, updated_at",
     )
     .order("updated_at", { ascending: false })
-    .limit(200);
+    .range(from, to);
 
   if (status && JOURNAL_STATUSES.includes(status as JournalStatus)) {
     query = query.eq("status", status);
@@ -1900,7 +2022,8 @@ export async function uploadAdminSiteImage(input: {
 
 export async function listAdminCustomers({
   search,
-}: Pick<ListFilterParams, "search"> = {}): Promise<AdminCustomerRow[]> {
+  page = 1,
+}: Pick<ListFilterParams, "search" | "page"> = {}): Promise<AdminCustomerRow[]> {
   const [orders, repairs, contacts] = await Promise.all([
     listAdminOrders(),
     listAdminRepairs(),
@@ -1995,6 +2118,9 @@ export async function listAdminCustomers({
     }
   }
 
+  const pageSize = PAGE_SIZES.customers;
+  const from = (page - 1) * pageSize;
+
   return Array.from(customers.values())
     .filter((entry) =>
       includesSearch(`${entry.name} ${entry.email ?? ""} ${entry.phone ?? ""}`, search),
@@ -2012,7 +2138,8 @@ export async function listAdminCustomers({
       latestContactSubject: entry.latestContactSubject,
       lastActivityAt: entry.lastActivityAt,
     }))
-    .sort((a, b) => b.lastActivityAt.localeCompare(a.lastActivityAt));
+    .sort((a, b) => b.lastActivityAt.localeCompare(a.lastActivityAt))
+    .slice(from, from + pageSize);
 }
 
 export async function getAdminDashboardStats(): Promise<AdminDashboardStats> {
@@ -2132,6 +2259,23 @@ export async function listActiveHeroSlides(): Promise<AdminHeroSlide[]> {
   }
 
   return (data as HeroSlideRow[]).map(toAdminHeroSlide);
+}
+
+export async function listAdminBrandSuggestions(): Promise<string[]> {
+  const serviceClient = createSupabaseServiceClient();
+  if (!serviceClient) return [];
+
+  const [productsResult, watchBrandsResult] = await Promise.all([
+    serviceClient.from("products").select("brand"),
+    serviceClient.from("watch_brands").select("name"),
+  ]);
+
+  const fromProducts = (productsResult.data ?? []).map((r: { brand: string }) => r.brand);
+  const fromWatchBrands = (watchBrandsResult.data ?? []).map((r: { name: string }) => r.name);
+
+  return Array.from(new Set([...fromWatchBrands, ...fromProducts]))
+    .filter(Boolean)
+    .sort((a, b) => a.localeCompare(b));
 }
 
 export async function upsertAdminHeroSlide(input: {

@@ -42,6 +42,11 @@ const nextConfig: NextConfig = {
             },
           ]
         : []),
+      // Allow any external HTTPS image (product images can be hosted anywhere)
+      {
+        protocol: "https",
+        hostname: "**",
+      },
     ],
   },
   async redirects() {
